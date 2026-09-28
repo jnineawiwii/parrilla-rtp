@@ -1,0 +1,26 @@
+:root {
+  --amarillo:   #FDC60A;
+  --naranja:    #F08217;
+  --ocre:       #AC6D14;
+  --rosa-claro: #F5AEB8;
+  --magenta:    #D72F89;
+  --rosa-int:   #E5074C;
+  --celeste:    #73CAE6;
+  --azul:       #266CB4;
+  --morado:     #8F4889;
+  --verde:      #027A35;
+  --gris-mid:   #55585A;
+  --gris-claro: #FFFAE9;
+  --rojo-mod7:  #E20E17;
+  --vino:       #A6184B;
+  --tinta:      #1A1A1A;
+}
+
+.camp-A_su_servicio            { background: var(--azul);    color: #fff; }
+.camp-RTP_avanza               { background: var(--verde);   color: #fff; }
+.camp-RTP_siempre_contigo      { background: var(--magenta); color: #fff; }
+.camp-Cultura_en_el_transporte { background: var(--naranja); color: #fff; }
+.camp-RTP_en_directo           { background: var(--rojo-mod7);color: #fff; }
+.camp-Movilidad_Integrada_MI   { background: var(--morado);  color: #fff; }
+.camp-Subete_a_la_cultura      { background: var(--ocre);    color: #fff; }
+.camp-Covid_19                 { background: var(--gris-mid);color: #fff; }

@@ -1,0 +1,155 @@
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  background: #f6f6f6;
+  color: var(--tinta);
+  font-size: 15px;
+  line-height: 1.5;
+}
+
+/* ---------- Topbar ---------- */
+.topbar {
+  display: flex; align-items: center; justify-content: space-between;
+  background: #fff;
+  border-bottom: 3px solid var(--vino);
+  padding: .6rem 1.5rem;
+  flex-wrap: wrap; gap: .8rem;
+}
+.brand a { font-weight: 700; color: var(--vino); text-decoration: none; font-size: 1.1rem; }
+.topnav { display: flex; align-items: center; gap: 1rem; flex-wrap: wrap; }
+.topnav a { color: var(--tinta); text-decoration: none; font-weight: 500; }
+.topnav a:hover { color: var(--vino); }
+.user-info { color: var(--gris-mid); font-size: .9rem; }
+.btn-link { background: none; border: 0; color: var(--vino); cursor: pointer; font-weight: 600; }
+
+/* ---------- Contenedor ---------- */
+.container { max-width: 1280px; margin: 1.5rem auto; padding: 0 1rem; }
+
+/* ---------- Alertas ---------- */
+.alert { padding: .8rem 1rem; border-radius: 6px; margin-bottom: 1rem; }
+.alert-ok  { background: #e6f6ec; color: #045a28; border: 1px solid #a9dfbf; }
+.alert-err { background: #fde8ea; color: #8a0f22; border: 1px solid #f5b7c0; }
+
+/* ---------- Tarjetas ---------- */
+.card {
+  background: #fff; border-radius: 8px; padding: 1.2rem;
+  box-shadow: 0 1px 3px rgba(0,0,0,.06);
+  margin-bottom: 1rem;
+}
+
+/* ---------- Tablas ---------- */
+.tabla { width: 100%; border-collapse: collapse; background: #fff; border-radius: 8px; overflow: hidden; }
+.tabla th, .tabla td { padding: .6rem .8rem; text-align: left; border-bottom: 1px solid #eee; }
+.tabla th { background: var(--gris-claro); color: var(--vino); font-weight: 600; }
+.tabla tr:hover td { background: #fafafa; }
+
+/* ---------- Chips de campaña ---------- */
+.chip {
+  display: inline-block; padding: .15rem .55rem;
+  border-radius: 999px; font-size: .78rem; font-weight: 600;
+}
+
+/* ---------- Botones ---------- */
+.btn {
+  display: inline-block; padding: .5rem .9rem;
+  border-radius: 6px; border: 1px solid transparent;
+  font-weight: 600; text-decoration: none; cursor: pointer;
+}
+.btn-primary { background: var(--vino); color: #fff; }
+.btn-primary:hover { background: #8c1440; }
+.btn-outline { background: #fff; color: var(--vino); border-color: var(--vino); }
+.btn-danger  { background: var(--rojo-mod7); color: #fff; }
+.btn-sm { padding: .3rem .6rem; font-size: .82rem; }
+
+/* ---------- Formularios ---------- */
+.form-label { display: block; font-weight: 600; margin-bottom: .3rem; font-size: .9rem; }
+.form-control, .form-select {
+  width: 100%; padding: .55rem .7rem;
+  border: 1px solid #ccc; border-radius: 6px;
+  font-size: .95rem; background: #fff;
+}
+.form-control:focus, .form-select:focus {
+  outline: 2px solid var(--azul); outline-offset: 1px;
+}
+.row { display: flex; flex-wrap: wrap; gap: 1rem; }
+.col { flex: 1 1 200px; }
+
+/* ---------- Notificaciones (campanita) ---------- */
+.dropdown-notif { position: relative; }
+.dropdown-notif .badge {
+  background: var(--rojo-mod7); color: #fff;
+  border-radius: 999px; padding: 0 .45rem;
+  font-size: .75rem; font-weight: 700; margin-left: .25rem;
+}
+.dropdown-content {
+  display: none; position: absolute; right: 0; top: 130%;
+  background: #fff; width: 340px; max-height: 420px; overflow-y: auto;
+  border-radius: 8px; box-shadow: 0 6px 24px rgba(0,0,0,.14);
+  padding: .5rem; z-index: 100;
+}
+.dropdown-notif.abierto .dropdown-content { display: block; }
+.dropdown-content .item {
+  padding: .55rem .6rem; border-bottom: 1px solid #f1f1f1;
+}
+.dropdown-content .item:last-child { border-bottom: 0; }
+.dropdown-content .item.no-leida { background: #fff7e0; }
+
+/* ---------- Mensajería ---------- */
+.msg-layout { display: grid; grid-template-columns: 300px 1fr; gap: 1rem; height: 70vh; }
+.msg-lista { background: #fff; border-radius: 8px; overflow-y: auto; }
+.msg-lista .conv { padding: .7rem .9rem; border-bottom: 1px solid #eee; cursor: pointer; }
+.msg-lista .conv:hover { background: #fafafa; }
+.msg-lista .conv.no-leidos { background: #fff7e0; }
+.msg-hilo { display: flex; flex-direction: column; background: #fff; border-radius: 8px; }
+.msg-hilo .mensajes { flex: 1; overflow-y: auto; padding: 1rem; }
+.msg-hilo .burbuja {
+  padding: .55rem .8rem; border-radius: 12px; max-width: 70%;
+  margin-bottom: .6rem; word-wrap: break-word;
+}
+.msg-hilo .burbuja.mio { background: var(--azul); color: #fff; margin-left: auto; }
+.msg-hilo .burbuja.otro { background: #f0f0f0; color: var(--tinta); }
+.msg-hilo form { display: flex; gap: .5rem; padding: .7rem; border-top: 1px solid #eee; }
+
+/* ---------- Gráficas ---------- */
+.graficas-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(380px, 1fr)); gap: 1.2rem; }
+.grafica-card { background: #fff; padding: 1rem; border-radius: 8px; box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+.grafica-card h3 { margin: 0 0 .8rem; font-size: 1rem; color: var(--vino); }
+
+/* ---------- Login ---------- */
+.login-wrap {
+  min-height: 100vh; display: flex; align-items: center; justify-content: center;
+  background: linear-gradient(135deg, var(--vino) 0%, var(--morado) 100%);
+  padding: 1rem;
+}
+.login-card {
+  background: #fff; padding: 2rem; border-radius: 12px;
+  width: 100%; max-width: 380px;
+  box-shadow: 0 10px 40px rgba(0,0,0,.2);
+}
+.login-card h1 { margin: 0 0 1.5rem; color: var(--vino); font-size: 1.4rem; text-align: center; }
+.login-card input { width: 100%; margin-bottom: .9rem; }
+
+/* ---------- Footer ---------- */
+.footer { text-align: center; color: var(--gris-mid); padding: 1.5rem; font-size: .82rem; }
+
+/* ---------- Utilidades ---------- */
+.text-muted { color: var(--gris-mid); }
+.mt-1 { margin-top: .5rem; }
+.mt-2 { margin-top: 1rem; }
+.mb-1 { margin-bottom: .5rem; }
+.mb-2 { margin-bottom: 1rem; }
+.d-flex { display: flex; }
+.gap-1 { gap: .5rem; }
+.gap-2 { gap: 1rem; }
+
+/* Mensajería responsive */
+@media (max-width: 720px) {
+    .msg-layout {
+        grid-template-columns: 1fr !important;
+    }
+    .msg-layout > aside {
+        max-height: 250px !important;
+    }
+}
