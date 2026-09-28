@@ -83,12 +83,12 @@ class Publicacion {
               (titulo, descripcion, texto_publicitario, fecha_publicacion, dia_semana,
                id_campana, id_tema, id_subtema, id_formato_contenido,
                id_usuario_responsable, id_usuario_produccion, id_usuario_postproduccion,
-               estado, notas, ruta_archivo)
+               estado, notas, ruta_archivo, tipo_archivo, url_material)
             VALUES
               (:titulo, :desc, :copy, :fecha, :dia,
                :cid, :tid, :sid, :fid,
                :uresp, :uprod, :upost,
-               :estado, :notas, :ruta)
+               :estado, :notas, :ruta, :tipo_archivo, :url_material)
             RETURNING id_publicacion
         ");
         $st->execute([
@@ -107,6 +107,8 @@ class Publicacion {
             ':estado' => $d['estado'] ?? 'Borrador',
             ':notas'  => $d['notas'] ?? null,
             ':ruta'   => $d['ruta_archivo'] ?? null,
+            ':tipo_archivo' => $d['tipo_archivo'] ?? null,
+            ':url_material' => $d['url_material'] ?? null,
         ]);
         return (int)$st->fetchColumn();
     }
@@ -129,6 +131,8 @@ class Publicacion {
                 estado                    = :estado,
                 notas                     = :notas,
                 ruta_archivo              = :ruta,
+                tipo_archivo              = :tipo_archivo,
+                url_material              = :url_material,
                 actualizado_en            = CURRENT_TIMESTAMP
             WHERE id_publicacion = :id
         ");
@@ -149,6 +153,8 @@ class Publicacion {
             ':estado' => $d['estado'] ?? 'Borrador',
             ':notas'  => $d['notas'] ?? null,
             ':ruta'   => $d['ruta_archivo'] ?? null,
+            ':tipo_archivo' => $d['tipo_archivo'] ?? null,
+            ':url_material' => $d['url_material'] ?? null,
         ]);
     }
 

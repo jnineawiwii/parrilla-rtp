@@ -73,6 +73,7 @@ $puedeBorrar = Auth::can('parrilla.borrar');
             <thead>
                 <tr>
                     <th>Fecha</th>
+                    <th>Archivo</th>
                     <th>Título</th>
                     <th>Campaña</th>
                     <th>Formato</th>
@@ -87,6 +88,23 @@ $puedeBorrar = Auth::can('parrilla.borrar');
                             <?= $r['fecha_publicacion']
                                 ? date('d/m/Y H:i', strtotime($r['fecha_publicacion']))
                                 : '—' ?>
+                        </td>
+                        <td>
+                            <?php if (!empty($r['ruta_archivo']) && ($r['tipo_archivo'] ?? '') === 'imagen'): ?>
+                                <a href="<?= htmlspecialchars($r['ruta_archivo']) ?>" target="_blank" rel="noopener noreferrer"
+                                   aria-label="Abrir imagen de <?= htmlspecialchars($r['titulo']) ?>">
+                                    <img class="parrilla-media-thumb" src="<?= htmlspecialchars($r['ruta_archivo']) ?>"
+                                         alt="Imagen de <?= htmlspecialchars($r['titulo']) ?>" loading="lazy">
+                                </a>
+                            <?php elseif (!empty($r['ruta_archivo']) && ($r['tipo_archivo'] ?? '') === 'video'): ?>
+                                <a class="parrilla-video-link" href="<?= htmlspecialchars($r['ruta_archivo']) ?>" target="_blank" rel="noopener noreferrer">
+                                    ▶ Ver video
+                                </a>
+                            <?php elseif (!empty($r['url_material'])): ?>
+                                <a href="<?= htmlspecialchars($r['url_material']) ?>" target="_blank" rel="noopener noreferrer">Abrir enlace</a>
+                            <?php elseif (!empty($r['ruta_archivo'])): ?>
+                                <a href="<?= htmlspecialchars($r['ruta_archivo']) ?>" target="_blank" rel="noopener noreferrer">Abrir material</a>
+                            <?php else: ?>—<?php endif; ?>
                         </td>
                         <td>
                             <a href="/parrilla/ver/<?= $r['id_publicacion'] ?>"

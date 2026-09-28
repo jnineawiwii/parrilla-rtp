@@ -58,10 +58,27 @@ class ParrillaController {
         Csrf::validar($_POST['_csrf'] ?? null);
 
         $id = (int)($_POST['id'] ?? 0);
-        $datos = $this->recolectar($_POST);
-
         if ($id > 0) {
             Auth::require('parrilla.editar');
+        }
+        $datos = $this->recolectar($_POST);
+
+        try {
+            $archivo = $this->procesarArchivoMaterial($_FILES['archivo_material'] ?? []);
+            if ($archivo !== null) {
+                $datos['ruta_archivo'] = $archivo['ruta'];
+                $datos['tipo_archivo'] = $archivo['tipo'];
+            } elseif ($id > 0) {
+                $actual = Publicacion::obtener($id);
+                $datos['ruta_archivo'] = $actual['ruta_archivo'] ?? null;
+                $datos['tipo_archivo'] = $actual['tipo_archivo'] ?? null;
+            }
+        } catch (RuntimeException $e) {
+            $_SESSION['flash_error'] = $e->getMessage();
+            Response::redirect($id > 0 ? '/parrilla/editar/' . $id : '/parrilla/crear');
+        }
+
+        if ($id > 0) {
             Publicacion::actualizar($id, $datos);
         } else {
             $id = Publicacion::crear($datos, (int)Auth::user()['id']);
@@ -120,9 +137,54 @@ class ParrillaController {
             'id_usuario_postproduccion' => $p['encargado_edicion'] ?: null,
             'estado'                    => $p['estado'] ?? 'Borrador',
             'notas'                     => $p['idea'] ?? null,
-            'ruta_archivo'              => $p['link_material'] ?? null,
+            'ruta_archivo'              => null,
+            'url_material'              => trim($p['link_material'] ?? '') ?: null,
         ];
     }
+
+    private function procesarArchivoMaterial(array $archivo): ?array {
+        if (empty($archivo) || ($archivo['error'] ?? UPLOAD_ERR_NO_FILE) === UPLOAD_ERR_NO_FILE) {
+            return null;
+        }
+        if (($archivo['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
+            throw new RuntimeException('No se pudo recibir el archivo. Intenta nuevamente.');
+        }
+
+        $maxBytes = 50 * 1024 * 1024;
+        if (($archivo['size'] ?? 0) > $maxBytes) {
+            throw new RuntimeException('El archivo no puede superar los 50 MB.');
+        }
+
+        $tiposPermitidos = [
+            'image/jpeg' => ['jpg', 'jpeg'],
+            'image/png' => ['png'],
+            'image/webp' => ['webp'],
+            'image/gif' => ['gif'],
+            'video/mp4' => ['mp4'],
+            'video/webm' => ['webm'],
+        ];
+        $finfo = new finfo(FILEINFO_MIME_TYPE);
+        $mime = $finfo->file($archivo['tmp_name']);
+        $extension = strtolower(pathinfo($archivo['name'] ?? '', PATHINFO_EXTENSION));
+        if (!isset($tiposPermitidos[$mime]) || !in_array($extension, $tiposPermitidos[$mime], true)) {
+            throw new RuntimeException('Formato no permitido. Sube una imagen JPG, PNG, WebP o GIF, o un video MP4/WebM.');
+        }
+
+        $directorio = APP_ROOT . '/public/uploads/material';
+        if (!is_dir($directorio) && !mkdir($directorio, 0755, true) && !is_dir($directorio)) {
+            throw new RuntimeException('No se pudo preparar la carpeta de archivos.');
+        }
+        $nombreSeguro = bin2hex(random_bytes(16)) . '.' . $extension;
+        if (!move_uploaded_file($archivo['tmp_name'], $directorio . '/' . $nombreSeguro)) {
+            throw new RuntimeException('No se pudo guardar el archivo en el servidor.');
+        }
+
+        return [
+            'ruta' => '/uploads/material/' . $nombreSeguro,
+            'tipo' => str_starts_with($mime, 'image/') ? 'imagen' : 'video',
+        ];
+    }
+
     public function aprobar(int $id): void {
     Auth::require('parrilla.aprobar');
     Csrf::validar($_POST['_csrf'] ?? null);

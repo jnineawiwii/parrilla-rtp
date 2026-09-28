@@ -15,7 +15,7 @@ $sel = function($k, $id) use ($registro) {
         <?= $esEdicion ? '✏️ Editar publicación' : '➕ Nueva publicación' ?>
     </h2>
 
-    <form id="formParrilla" method="POST" action="/parrilla/guardar">
+    <form id="formParrilla" method="POST" action="/parrilla/guardar" enctype="multipart/form-data">
         <?= Csrf::campo() ?>
         <?php if ($esEdicion): ?>
             <input type="hidden" name="id" value="<?= (int)$registro['id_publicacion'] ?>">
@@ -167,9 +167,25 @@ $sel = function($k, $id) use ($registro) {
                     </select>
                 </div>
                 <div class="col" style="flex:1 1 300px;">
-                    <label class="form-label" for="link_material">Ruta / Link del material</label>
+                    <label class="form-label" for="archivo_material">Archivo para publicar (imagen o video)</label>
+                    <input type="file" id="archivo_material" name="archivo_material" class="form-control"
+                           accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm">
+                    <small class="text-muted">JPG, PNG, WebP, GIF, MP4 o WebM. Máximo 50 MB.</small>
+                    <div id="materialPreview" class="material-preview" aria-live="polite">
+                        <?php if (!empty($registro['ruta_archivo']) && in_array($registro['tipo_archivo'] ?? '', ['imagen', 'video'], true)): ?>
+                            <?php if ($registro['tipo_archivo'] === 'imagen'): ?>
+                                <img src="<?= htmlspecialchars($registro['ruta_archivo']) ?>" alt="Vista previa del archivo actual">
+                            <?php else: ?>
+                                <video src="<?= htmlspecialchars($registro['ruta_archivo']) ?>" controls preload="metadata"></video>
+                            <?php endif; ?>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <div class="col" style="flex:1 1 300px;">
+                    <label class="form-label" for="link_material">Enlace externo (opcional)</label>
                     <input type="text" id="link_material" name="link_material" class="form-control"
-                           value="<?= $v('ruta_archivo') ?>">
+                              value="<?= $v('url_material') ?>">
+                    <small class="text-muted">Si adjuntas un archivo, se usará ese medio en la parrilla.</small>
                 </div>
             </div>
 
@@ -203,6 +219,14 @@ $sel = function($k, $id) use ($registro) {
                 'reproducciones'=>'Reproducciones','coment_positivos'=>'Coment. +',
                 'coment_negativos'=>'Coment. −','coment_neutros'=>'Coment. neutros',
             ];
+            $reaccionesFacebook = [
+                'fb_me_gusta' => 'Me gusta',
+                'fb_me_encanta' => 'Me encanta',
+                'fb_me_entristece' => 'Me entristece',
+                'fb_me_sorprende' => 'Me sorprende',
+                'fb_me_enoja' => 'Me enoja',
+                'fb_me_importa' => 'Me importa',
+            ];
             foreach ($redes as $red => $nom):
                 $mg = $metricasGuardadas[$red] ?? [];
             ?>
@@ -211,6 +235,7 @@ $sel = function($k, $id) use ($registro) {
                     <summary style="cursor:pointer; font-weight:600; color:var(--vino);"><?= $nom ?></summary>
                     <div class="row mt-1">
                         <?php foreach ($campos as $k => $lbl): ?>
+                            <?php if ($red === 'facebook' && $k === 'me_gusta') continue; ?>
                             <div class="col" style="flex:1 1 130px;">
                                 <label class="form-label" style="font-size:.75rem;"><?= $lbl ?></label>
                                 <input type="number" min="0" class="form-control"
@@ -218,6 +243,23 @@ $sel = function($k, $id) use ($registro) {
                                        value="<?= (int)($mg[$k] ?? 0) ?>">
                             </div>
                         <?php endforeach; ?>
+                        <?php if ($red === 'facebook'): ?>
+                            <div class="col" style="flex:1 1 100%;">
+                                <strong class="metric-reaction-heading">Reacciones de Facebook</strong>
+                            </div>
+                            <?php foreach ($reaccionesFacebook as $k => $lbl): ?>
+                                <div class="col" style="flex:1 1 130px;">
+                                    <label class="form-label" for="<?= $k ?>" style="font-size:.75rem;"><?= $lbl ?></label>
+                                    <input type="number" min="0" id="<?= $k ?>" class="form-control facebook-reaction"
+                                           name="metrica[facebook][<?= $k ?>]" value="<?= (int)($mg[$k] ?? 0) ?>">
+                                </div>
+                            <?php endforeach; ?>
+                            <div class="col" style="flex:1 1 130px;">
+                                <label class="form-label" for="facebook-total-reacciones" style="font-size:.75rem;">Total de reacciones</label>
+                                <input type="number" id="facebook-total-reacciones" class="form-control" value="0" readonly>
+                                <input type="hidden" name="metrica[facebook][me_gusta]" id="facebook-total-hidden" value="<?= (int)($mg['me_gusta'] ?? 0) ?>">
+                            </div>
+                        <?php endif; ?>
                     </div>
                 </details>
             <?php endforeach; ?>
@@ -233,6 +275,40 @@ $sel = function($k, $id) use ($registro) {
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
+    const mediaInput = document.getElementById('archivo_material');
+    const mediaPreview = document.getElementById('materialPreview');
+    let previewUrl = null;
+    if (mediaInput && mediaPreview) {
+        mediaInput.addEventListener('change', function () {
+            if (previewUrl) URL.revokeObjectURL(previewUrl);
+            mediaPreview.replaceChildren();
+            const file = mediaInput.files[0];
+            if (!file) return;
+            previewUrl = URL.createObjectURL(file);
+            const element = file.type.startsWith('image/') ? document.createElement('img') : document.createElement('video');
+            element.src = previewUrl;
+            element.alt = file.type.startsWith('image/') ? 'Vista previa del archivo seleccionado' : '';
+            if (element.tagName === 'VIDEO') {
+                element.controls = true;
+                element.preload = 'metadata';
+            }
+            mediaPreview.append(element);
+        });
+    }
+
+    const reactions = Array.from(document.querySelectorAll('.facebook-reaction'));
+    const totalReactions = document.getElementById('facebook-total-reacciones');
+    const hiddenReactions = document.getElementById('facebook-total-hidden');
+    function updateFacebookReactionTotal(useBreakdown = false) {
+        if (!totalReactions || !hiddenReactions) return;
+        const breakdownTotal = reactions.reduce((sum, input) => sum + Math.max(0, Number(input.value) || 0), 0);
+        const total = useBreakdown ? breakdownTotal : Math.max(breakdownTotal, Number(hiddenReactions.value) || 0);
+        totalReactions.value = total;
+        hiddenReactions.value = total;
+    }
+    reactions.forEach(input => input.addEventListener('input', () => updateFacebookReactionTotal(true)));
+    updateFacebookReactionTotal();
+
     const btnIA = document.getElementById('btnGenerarIA');
     if (!btnIA) return;
     btnIA.addEventListener('click', async function () {

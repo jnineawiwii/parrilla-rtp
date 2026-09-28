@@ -131,7 +131,24 @@ $r = $registro;
 <?php if ($r['ruta_archivo']): ?>
 <div class="card">
     <h3 style="margin:0 0 .8rem; font-size:1rem; color:var(--vino);">📁 Material</h3>
-    <p><?= htmlspecialchars($r['ruta_archivo']) ?></p>
+    <?php if (($r['tipo_archivo'] ?? '') === 'imagen'): ?>
+        <a href="<?= htmlspecialchars($r['ruta_archivo']) ?>" target="_blank" rel="noopener noreferrer">
+            <img class="material-preview-image" src="<?= htmlspecialchars($r['ruta_archivo']) ?>" alt="Material de <?= htmlspecialchars($r['titulo']) ?>">
+        </a>
+    <?php elseif (($r['tipo_archivo'] ?? '') === 'video'): ?>
+        <video class="material-preview-video" src="<?= htmlspecialchars($r['ruta_archivo']) ?>" controls preload="metadata"></video>
+    <?php else: ?>
+        <a href="<?= htmlspecialchars($r['ruta_archivo']) ?>" target="_blank" rel="noopener noreferrer">
+            <?= htmlspecialchars($r['ruta_archivo']) ?>
+        </a>
+    <?php endif; ?>
+</div>
+<?php elseif (!empty($r['url_material'])): ?>
+<div class="card">
+    <h3 style="margin:0 0 .8rem; font-size:1rem; color:var(--vino);">📁 Material</h3>
+    <a href="<?= htmlspecialchars($r['url_material']) ?>" target="_blank" rel="noopener noreferrer">
+        <?= htmlspecialchars($r['url_material']) ?>
+    </a>
 </div>
 <?php endif; ?>
 
