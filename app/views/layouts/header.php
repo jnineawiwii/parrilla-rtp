@@ -7,6 +7,7 @@
     <title><?= htmlspecialchars($titulo ?? APP_NAME) ?></title>
     <link rel="stylesheet" href="/css/paleta.css">
     <link rel="stylesheet" href="/css/estilos.css">
+    <script src="/js/accesibilidad.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
     <script src="/js/app.js" defer></script>
     <script src="/js/notificaciones.js" defer></script>
@@ -38,6 +39,52 @@
             <div class="dropdown-content" id="notif-list">
                 <p class="text-muted">Sin notificaciones</p>
             </div>
+        </div>
+
+        <div class="accessibility-menu">
+            <button type="button" class="accessibility-trigger" id="accessibilityToggle"
+                    aria-expanded="false" aria-controls="accessibilityPanel" title="Ajustes de accesibilidad">
+                <span aria-hidden="true">☷</span><span class="sr-only">Ajustes de accesibilidad</span>
+            </button>
+            <section class="accessibility-panel" id="accessibilityPanel" aria-label="Configuración rápida" hidden>
+                <header class="accessibility-panel-header">
+                    <strong>⚙ Configuración Rápida</strong>
+                    <span id="accessibilitySaved">Auto-guardado</span>
+                </header>
+                <div class="accessibility-row">
+                    <span>Tema</span>
+                    <div class="accessibility-options" role="group" aria-label="Tema">
+                        <button type="button" data-theme="light" aria-label="Tema claro" title="Tema claro">☀️</button>
+                        <button type="button" data-theme="dark" aria-label="Tema oscuro" title="Tema oscuro">🌙</button>
+                        <button type="button" data-theme="system" aria-label="Tema del sistema" title="Tema del sistema">▣</button>
+                    </div>
+                </div>
+                <div class="accessibility-row">
+                    <span>Tamaño</span>
+                    <div class="accessibility-options font-size-options">
+                        <button type="button" data-font-step="-1" aria-label="Reducir tamaño de texto">A-</button>
+                        <output id="accessibilityFontSize">100%</output>
+                        <button type="button" data-font-step="1" aria-label="Aumentar tamaño de texto">A+</button>
+                    </div>
+                </div>
+                <label class="accessibility-row" for="highContrast">
+                    <span>Alto contraste</span>
+                    <input type="checkbox" id="highContrast" class="accessibility-switch">
+                </label>
+                <div class="accessibility-row">
+                    <span>Color</span>
+                    <div class="accessibility-options accent-options" role="group" aria-label="Color de acento">
+                        <button type="button" data-accent="#27a34a" aria-label="Verde"></button>
+                        <button type="button" data-accent="#a51d4b" aria-label="Vino"></button>
+                        <button type="button" data-accent="#0878e8" aria-label="Azul"></button>
+                        <button type="button" data-accent="#7045bd" aria-label="Violeta"></button>
+                        <button type="button" data-accent="#f07818" aria-label="Naranja"></button>
+                        <button type="button" data-accent="#22bfa0" aria-label="Turquesa"></button>
+                        <button type="button" data-accent="#111111" aria-label="Negro"></button>
+                    </div>
+                </div>
+                <button type="button" class="accessibility-reset" id="accessibilityReset">↻ Restablecer configuración</button>
+            </section>
         </div>
 
         <span class="user-info">

@@ -14,9 +14,76 @@
     const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
     const REDES = ['facebook','instagram','x','youtube'];
 
-    async function cargarDatos(anio) {
-        const r = await fetch('/api/graficas?anio=' + anio);
+    async function cargarDatos(anio, publicacionId) {
+        const params = new URLSearchParams({ anio, publicacion: publicacionId });
+        const r = await fetch('/api/graficas?' + params.toString());
         return await r.json();
+    }
+
+    function mostrarSinDatos(ctx, mensaje) {
+        if (!ctx) return;
+        ctx.parentElement.insertAdjacentHTML('beforeend',
+            `<p class="text-muted chart-empty" style="text-align:center;padding:1rem;">${mensaje}</p>`);
+    }
+
+    function graficaPublicacion(canvasId, metricas) {
+        const ctx = document.getElementById(canvasId);
+        if (!ctx) return;
+        const labels = metricas.map(m => NOMBRES[m.red] || m.red);
+        const datasets = [
+            { label: 'Reacciones', data: metricas.map(m => Number(m.me_gusta || 0)), backgroundColor: '#a51d4b' },
+            { label: 'Comentarios', data: metricas.map(m => Number(m.comentarios || 0)), backgroundColor: '#0878e8' },
+            { label: 'Compartidos', data: metricas.map(m => Number(m.compartidos || 0)), backgroundColor: '#27a34a' },
+        ];
+        if (datasets.every(dataset => dataset.data.every(value => value === 0))) {
+            mostrarSinDatos(ctx, 'Sin interacciones registradas para esta publicación.');
+            return;
+        }
+        new Chart(ctx, {
+            type: 'bar',
+            data: { labels, datasets },
+            options: { responsive: true, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true } } },
+        });
+    }
+
+    function graficaReaccionesFacebook(canvasId, metricas) {
+        const ctx = document.getElementById(canvasId);
+        if (!ctx) return;
+        const facebook = metricas.find(m => m.red === 'facebook');
+        const fields = [
+            ['Me gusta', 'fb_me_gusta', '#0878e8'],
+            ['Me encanta', 'fb_me_encanta', '#e64969'],
+            ['Me entristece', 'fb_me_entristece', '#e2a521'],
+            ['Me sorprende', 'fb_me_sorprende', '#e2a521'],
+            ['Me enoja', 'fb_me_enoja', '#df572f'],
+            ['Me importa', 'fb_me_importa', '#7b4ab5'],
+        ];
+        const values = fields.map(([, key]) => Number(facebook?.[key] || 0));
+        if (!facebook || values.every(value => value === 0)) {
+            mostrarSinDatos(ctx, 'Captura las reacciones de Facebook en el formulario de la publicación.');
+            return;
+        }
+        new Chart(ctx, {
+            type: 'bar',
+            data: { labels: fields.map(([label]) => label), datasets: [{ label: 'Reacciones', data: values, backgroundColor: fields.map(([, , color]) => color) }] },
+            options: { responsive: true, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true } } },
+        });
+    }
+
+    function graficaSentimientoPublicacion(canvasId, metricas) {
+        const ctx = document.getElementById(canvasId);
+        if (!ctx) return;
+        const positives = metricas.reduce((sum, m) => sum + Number(m.coment_positivos || 0), 0);
+        const negatives = metricas.reduce((sum, m) => sum + Number(m.coment_negativos || 0), 0);
+        if (positives + negatives === 0) {
+            mostrarSinDatos(ctx, 'Captura comentarios positivos y negativos en las métricas de la publicación.');
+            return;
+        }
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: { labels: ['Positivos', 'Negativos'], datasets: [{ data: [positives, negatives], backgroundColor: ['#27a34a', '#e20e17'], borderColor: '#fff', borderWidth: 2 }] },
+            options: { responsive: true, plugins: { legend: { position: 'bottom' } } },
+        });
     }
 
     // 🥧 Gráfica de pastel (dona) — distribución % de interacción por red
@@ -186,12 +253,17 @@
 
     window.addEventListener('DOMContentLoaded', async () => {
         const anio = window.GRAFICAS_ANIO || new Date().getFullYear();
+        const publicacionId = window.GRAFICAS_PUBLICACION || 0;
         try {
-            const datos = await cargarDatos(anio);
+            const datos = await cargarDatos(anio, publicacionId);
             graficaPastel('grafPastel', datos.resumen || []);
             graficaEdificio('grafEdificio', datos.mensual || []);
             graficaAlcance('grafAlcance', datos.resumen || []);
             graficaSentimiento('grafSentimiento', datos.resumen || []);
+            const metricasPublicacion = datos.publicacion || [];
+            graficaPublicacion('grafPublicacion', metricasPublicacion);
+            graficaReaccionesFacebook('grafReaccionesFacebook', metricasPublicacion);
+            graficaSentimientoPublicacion('grafSentimientoPublicacion', metricasPublicacion);
         } catch (e) {
             console.error('Error al cargar gráficas:', e);
         }

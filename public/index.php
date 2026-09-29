@@ -1,4 +1,11 @@
 <?php
+if (PHP_SAPI === 'cli-server') {
+    $rutaSolicitada = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
+    if ($rutaSolicitada !== '/' && is_file(__DIR__ . $rutaSolicitada)) {
+        return false;
+    }
+}
+
 require __DIR__ . '/../config/config.php';
 require __DIR__ . '/../config/database.php';
 
