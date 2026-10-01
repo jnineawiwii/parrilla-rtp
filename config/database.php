@@ -8,10 +8,10 @@ function db(): PDO {
     if ($pdo instanceof PDO) return $pdo;
 
     $host = getenv('PGHOST') ?: 'localhost';
-    $port = getenv('PGPORT') ?: '5432';
-    $name = getenv('PGDATABASE') ?: 'parrilla_rtp';
+    $port = getenv('PGPORT') ?: '5433';
+    $name = getenv('PGDATABASE') ?: 'parrilla-rtp';
     $user = getenv('PGUSER') ?: 'postgres';
-    $pass = getenv('PGPASSWORD') ?: '';
+    $pass = getenv('PGPASSWORD') ?: '12345678';
 
     $dsn = "pgsql:host=$host;port=$port;dbname=$name";
 

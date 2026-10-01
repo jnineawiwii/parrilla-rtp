@@ -5,6 +5,13 @@ class Publicacion {
         $where  = ['1=1'];
         $params = [];
 
+        // NUEVO: Filtro por usuario asociado (responsable O postproducción)
+        if (!empty($f['id_usuario_asociado'])) {
+            $where[] = "(p.id_usuario_responsable = :id_resp OR p.id_usuario_postproduccion = :id_post)";
+            $params[':id_resp'] = $f['id_usuario_asociado'];
+            $params[':id_post'] = $f['id_usuario_asociado'];
+        }
+
         if (!empty($f['mes'])) {
             $where[] = "EXTRACT(MONTH FROM p.fecha_publicacion) = :mes";
             $params[':mes'] = $f['mes'];
@@ -26,17 +33,24 @@ class Publicacion {
             $params[':q'] = '%' . $f['q'] . '%';
         }
 
+        // CONSULTA ACTUALIZADA: Se agregaron los JOIN con gestion_usuarios
         $sql = "SELECT p.*,
                        c.nombre_campana        AS campana_nombre,
                        c.color                 AS campana_color,
                        f.nombre_formato        AS formato_nombre,
                        t.nombre_tema           AS tema_nombre,
-                       s.nombre_subtema        AS subtema_nombre
+                       s.nombre_subtema        AS subtema_nombre,
+                       ur.nombre_completo      AS responsable_nombre,
+                       up.nombre_completo      AS produccion_nombre,
+                       uo.nombre_completo      AS postproduccion_nombre
                 FROM gestion_publicaciones p
                 LEFT JOIN gestion_campanas           c ON c.id_campana = p.id_campana
                 LEFT JOIN gestion_formatos_contenido f ON f.id_formato = p.id_formato_contenido
                 LEFT JOIN gestion_temas              t ON t.id_tema    = p.id_tema
                 LEFT JOIN gestion_subtemas           s ON s.id_subtema = p.id_subtema
+                LEFT JOIN gestion_usuarios           ur ON ur.id_usuario = p.id_usuario_responsable
+                LEFT JOIN gestion_usuarios           up ON up.id_usuario = p.id_usuario_produccion
+                LEFT JOIN gestion_usuarios           uo ON uo.id_usuario = p.id_usuario_postproduccion
                 WHERE " . implode(' AND ', $where) . "
                 ORDER BY p.fecha_publicacion DESC NULLS LAST, p.id_publicacion DESC
                 LIMIT :lim OFFSET :off";
@@ -80,7 +94,7 @@ class Publicacion {
     public static function crear(array $d, int $uid): int {
         $st = db()->prepare("
             INSERT INTO gestion_publicaciones
-              (titulo, descripcion, texto_publicitario, fecha_publicacion, dia_semana,
+              (titulo, descripcion, \"copy\", fecha_publicacion, dia_semana,
                id_campana, id_tema, id_subtema, id_formato_contenido,
                id_usuario_responsable, id_usuario_produccion, id_usuario_postproduccion,
                estado, notas, ruta_archivo, tipo_archivo, url_material)
@@ -94,7 +108,7 @@ class Publicacion {
         $st->execute([
             ':titulo' => $d['titulo'],
             ':desc'   => $d['descripcion'] ?? null,
-            ':copy'   => $d['texto_publicitario'] ?? null,
+            ':copy'   => $d['copy'] ?? null,
             ':fecha'  => $d['fecha_publicacion'] ?: null,
             ':dia'    => $d['dia_semana'] ?? null,
             ':cid'    => $d['id_campana'] ?: null,
@@ -118,7 +132,7 @@ class Publicacion {
             UPDATE gestion_publicaciones SET
                 titulo                    = :titulo,
                 descripcion               = :desc,
-                texto_publicitario        = :copy,
+                \"copy\"                   = :copy,
                 fecha_publicacion         = :fecha,
                 dia_semana                = :dia,
                 id_campana                = :cid,
@@ -140,7 +154,7 @@ class Publicacion {
             ':id'     => $id,
             ':titulo' => $d['titulo'],
             ':desc'   => $d['descripcion'] ?? null,
-            ':copy'   => $d['texto_publicitario'] ?? null,
+            ':copy'   => $d['copy'] ?? null,
             ':fecha'  => $d['fecha_publicacion'] ?: null,
             ':dia'    => $d['dia_semana'] ?? null,
             ':cid'    => $d['id_campana'] ?: null,

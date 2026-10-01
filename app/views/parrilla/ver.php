@@ -110,16 +110,16 @@ $r = $registro;
     </table>
 </div>
 
-<?php if ($r['descripcion'] || $r['texto_publicitario'] || $r['notas']): ?>
+<?php if ($r['descripcion'] || $r['copy'] || $r['notas']): ?>
 <div class="card">
     <h3 style="margin:0 0 .8rem; font-size:1rem; color:var(--vino);">📝 Contenido</h3>
     <?php if ($r['descripcion']): ?>
         <p><strong>Descripción:</strong><br><?= nl2br(htmlspecialchars($r['descripcion'])) ?></p>
     <?php endif; ?>
-    <?php if ($r['texto_publicitario']): ?>
+    <?php if ($r['copy']): ?>
         <p style="margin-top:.8rem;"><strong>Copy:</strong></p>
         <p style="white-space:pre-wrap; background:#fafafa; padding:1rem; border-radius:6px;">
-            <?= htmlspecialchars($r['texto_publicitario']) ?>
+            <?= htmlspecialchars($r['copy']) ?>
         </p>
     <?php endif; ?>
     <?php if ($r['notas']): ?>

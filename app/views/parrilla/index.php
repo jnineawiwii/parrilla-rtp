@@ -74,10 +74,14 @@ $puedeBorrar = Auth::can('parrilla.borrar');
                 <tr>
                     <th>Fecha</th>
                     <th>Archivo</th>
-                    <th>Título</th>
+                    <th>Título / Descripción</th>
+                    <th>Copy</th>
                     <th>Campaña</th>
+                    <th>Tema / Subtema</th>
                     <th>Formato</th>
-                    <th>Estado</th>
+                    <th>Responsable</th>
+                    <th>Producción / Post</th>
+                    <th>Estado (Avance)</th>
                     <th style="text-align:right;">Acciones</th>
                 </tr>
             </thead>
@@ -111,6 +115,19 @@ $puedeBorrar = Auth::can('parrilla.borrar');
                                style="color:var(--vino); font-weight:600; text-decoration:none;">
                                 <?= htmlspecialchars($r['titulo']) ?>
                             </a>
+                            <?php if (!empty($r['descripcion'])): ?>
+                                <div class="text-muted" style="font-size:.75rem; margin-top:.2rem; max-width:250px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">
+                                    <?= htmlspecialchars($r['descripcion']) ?>
+                                </div>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <?php if (!empty($r['copy'])): ?>
+                                <div title="<?= htmlspecialchars($r['copy']) ?>"
+                                     style="font-size:.8rem; max-width:300px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; cursor:help;">
+                                    <?= htmlspecialchars($r['copy']) ?>
+                                </div>
+                            <?php else: ?>—<?php endif; ?>
                         </td>
                         <td>
                             <?php if ($r['campana_nombre']): ?>
@@ -120,7 +137,18 @@ $puedeBorrar = Auth::can('parrilla.borrar');
                                 </span>
                             <?php else: ?>—<?php endif; ?>
                         </td>
+                        <td>
+                            <div style="font-size:.85rem;"><strong><?= htmlspecialchars($r['tema_nombre'] ?? '—') ?></strong></div>
+                            <div class="text-muted" style="font-size:.75rem;"><?= htmlspecialchars($r['subtema_nombre'] ?? '—') ?></div>
+                        </td>
                         <td><?= htmlspecialchars($r['formato_nombre'] ?? '—') ?></td>
+                        <td>
+                            <div style="font-size:.85rem;"><?= htmlspecialchars($r['responsable_nombre'] ?? '—') ?></div>
+                        </td>
+                        <td>
+                            <div style="font-size:.75rem;" class="text-muted">Prod: <?= htmlspecialchars($r['produccion_nombre'] ?? '—') ?></div>
+                            <div style="font-size:.75rem;" class="text-muted">Post: <?= htmlspecialchars($r['postproduccion_nombre'] ?? '—') ?></div>
+                        </td>
                         <td>
                             <?php
                             $colorEstado = [
@@ -134,21 +162,29 @@ $puedeBorrar = Auth::can('parrilla.borrar');
                             <span class="chip" style="background:<?= $colorEstado ?>; color:#fff;">
                                 <?= htmlspecialchars($r['estado']) ?>
                             </span>
+                            <?php if (!empty($r['notas'])): ?>
+                                <div class="text-muted" style="font-size:.7rem; margin-top:.2rem;" title="<?= htmlspecialchars($r['notas']) ?>">
+                                    📝 <?= htmlspecialchars(mb_substr($r['notas'], 0, 30)) ?>...
+                                </div>
+                            <?php endif; ?>
                         </td>
                         <td style="text-align:right; white-space:nowrap;">
                             <a href="/parrilla/ver/<?= $r['id_publicacion'] ?>" class="btn btn-sm btn-outline">👁 Ver</a>
-                                <?php if (Auth::can('parrilla.aprobar') && !in_array($r['estado'], ['Aprobado','Publicado'])): ?>
-        <form action="/parrilla/aprobar/<?= $r['id_publicacion'] ?>" method="POST"
-              style="display:inline"
-              onsubmit="return confirm('¿Aprobar esta publicación?');">
-            <?= Csrf::campo() ?>
-            <button type="submit" class="btn btn-sm" title="Aprobar"
-                    style="background:var(--verde); color:#fff;">✅</button>
-        </form>
-    <?php endif; ?>
+                            
+                            <?php if (Auth::can('parrilla.aprobar') && !in_array($r['estado'], ['Aprobado','Publicado'])): ?>
+                                <form action="/parrilla/aprobar/<?= $r['id_publicacion'] ?>" method="POST"
+                                      style="display:inline"
+                                      onsubmit="return confirm('¿Aprobar esta publicación?');">
+                                    <?= Csrf::campo() ?>
+                                    <button type="submit" class="btn btn-sm" title="Aprobar"
+                                            style="background:var(--verde); color:#fff;">✅</button>
+                                </form>
+                            <?php endif; ?>
+                            
                             <?php if (Auth::can('parrilla.editar')): ?>
                                 <a href="/parrilla/editar/<?= $r['id_publicacion'] ?>" class="btn btn-sm btn-outline">✏️ Editar</a>
                             <?php endif; ?>
+                            
                             <?php if ($puedeBorrar): ?>
                                 <form action="/parrilla/eliminar/<?= $r['id_publicacion'] ?>" method="POST"
                                       style="display:inline"

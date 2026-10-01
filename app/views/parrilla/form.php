@@ -136,7 +136,7 @@ $sel = function($k, $id) use ($registro) {
                     </button>
                 <?php endif; ?>
             </div>
-            <textarea id="copy_in" name="copy_in" class="form-control" rows="5"><?= $v('texto_publicitario') ?></textarea>
+            <textarea id="copy_in" name="copy_in" class="form-control" rows="5"><?= $v('copy') ?></textarea>
         </fieldset>
 
         <!-- PRODUCCIÓN -->

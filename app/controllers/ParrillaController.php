@@ -4,6 +4,11 @@ class ParrillaController {
     public function index(): void {
         Auth::require('parrilla.ver');
 
+        // Obtenemos los datos del usuario logueado
+        $user = Auth::user();
+        $rol  = strtolower($user['rol']); // <-- NORMALIZAMOS A MINÚSCULAS
+        $uid  = (int)$user['id'];
+
         $filtros = [
             'mes'     => $_GET['mes']     ?? null,
             'anio'    => $_GET['anio']    ?? date('Y'),
@@ -11,6 +16,16 @@ class ParrillaController {
             'estado'  => $_GET['estado']  ?? null,
             'q'       => $_GET['q']       ?? null,
         ];
+
+        // LÓGICA DE VISIBILIDAD POR ROL
+        if ($rol === 'editor') {
+            // Los editores ven sus proyectos donde son responsables O postproducción
+            $filtros['id_usuario_asociado'] = $uid;
+        } else {
+            // Admin y Lector ven TODOS los proyectos
+            $filtros['id_usuario_asociado'] = null;
+        }
+
         $pag = max(1, (int)($_GET['pag'] ?? 1));
 
         $registros = Publicacion::listar($filtros, $pag, 25);
@@ -123,7 +138,7 @@ class ParrillaController {
         return [
             'titulo'                    => trim($p['titulo']),
             'descripcion'               => $p['descripcion'] ?? null,
-            'texto_publicitario'        => $p['copy_in'] ?? null,
+            'copy'                      => $p['copy_in'] ?? null,
             'fecha_publicacion'         => !empty($p['fecha'])
                                             ? ($p['fecha'] . ' ' . ($p['hora'] ?: '00:00:00'))
                                             : null,

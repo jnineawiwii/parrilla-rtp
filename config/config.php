@@ -35,6 +35,7 @@ define('APP_ROOT', dirname(__DIR__));
 
 // Sesión segura
 if (session_status() === PHP_SESSION_NONE) {
+    session_save_path('/Applications/XAMPP/xamppfiles/temp/');
     session_set_cookie_params([
         'httponly' => true,
         'samesite' => 'Lax',
