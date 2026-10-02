@@ -1,20 +1,15 @@
 <?php
 class Notif {
+    /**
+     * Crea una notificación.
+     * $titulo = tipo corto ('mensaje', 'sistema', 'recordatorio_hoy', etc.)
+     * $mensaje = texto completo que ve el usuario
+     */
     public static function crear(int $uid, string $titulo, string $mensaje, ?int $idPub = null): void {
-        $st = db()->prepare("
-            INSERT INTO gestion_notificaciones
-                (id_usuario, id_publicacion, mensaje, tipo_notificacion)
-            VALUES (?, ?, ?, ?)
-        ");
-        $st->execute([$uid, $idPub, $mensaje, $titulo]);
+        Notificacion::crear($uid, $titulo, $mensaje, $idPub);
     }
 
     public static function noLeidas(int $uid): int {
-        $st = db()->prepare("
-            SELECT COUNT(*) FROM gestion_notificaciones
-            WHERE id_usuario = ? AND leido = FALSE
-        ");
-        $st->execute([$uid]);
-        return (int)$st->fetchColumn();
+        return Notificacion::noLeidas($uid);
     }
 }

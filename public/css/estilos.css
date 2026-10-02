@@ -286,3 +286,288 @@ body[data-theme="dark"] .accessibility-panel-header strong { color: #fff; }
   .accessibility-panel { position: fixed; top: 72px; right: 12px; }
   .tabla { min-width: 720px; }
 }
+
+/* ============================================================
+   CAMPANITA DE NOTIFICACIONES
+   ============================================================ */
+
+.dropdown-notif {
+    position: relative;
+}
+
+/* ---- La campanita ---- */
+#campanita {
+    display: inline-flex;
+    align-items: center;
+    gap: .4rem;
+    padding: .4rem .8rem;
+    border-radius: 999px;
+    background: linear-gradient(135deg, #A6184B 0%, #8F4889 100%);
+    color: #fff !important;
+    font-size: 1.1rem;
+    text-decoration: none;
+    transition: all .2s ease;
+    box-shadow: 0 2px 6px rgba(166, 24, 75, .25);
+}
+
+#campanita:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(166, 24, 75, .4);
+    background: linear-gradient(135deg, #8F4889 0%, #A6184B 100%);
+}
+
+/* ---- Contador ---- */
+#notif-count {
+    background: #FDC60A;
+    color: #1A1A1A;
+    font-weight: 800;
+    font-size: .75rem;
+    padding: .15rem .5rem;
+    border-radius: 999px;
+    min-width: 20px;
+    text-align: center;
+    display: inline-block;
+    box-shadow: 0 0 0 2px rgba(255,255,255,.25);
+}
+
+/* Animación de pulso cuando hay notificaciones nuevas */
+#notif-count.pulso {
+    animation: pulsoNotif 1.5s infinite;
+}
+
+@keyframes pulsoNotif {
+    0%   { box-shadow: 0 0 0 0 rgba(253, 198, 10, .7); }
+    70%  { box-shadow: 0 0 0 8px rgba(253, 198, 10, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(253, 198, 10, 0); }
+}
+
+/* ============================================================
+   DROPDOWN DE NOTIFICACIONES
+   ============================================================ */
+
+.dropdown-notif .dropdown-content {
+    display: none;
+    position: absolute;
+    right: 0;
+    top: calc(100% + 8px);
+    width: 380px;
+    max-height: 480px;
+    overflow-y: auto;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, .18);
+    border: 1px solid #eee;
+    z-index: 999;
+    padding: 0;
+}
+
+.dropdown-notif.abierto .dropdown-content {
+    display: block;
+    animation: aparecer .15s ease-out;
+}
+
+@keyframes aparecer {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ---- Encabezado del dropdown ---- */
+.dropdown-content .header-notif {
+    padding: .7rem 1rem;
+    background: linear-gradient(135deg, #A6184B 0%, #8F4889 100%);
+    color: #fff;
+    border-radius: 12px 12px 0 0;
+    font-weight: 700;
+    font-size: .85rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.dropdown-content .header-notif a {
+    color: #FFFAE9;
+    font-size: .75rem;
+    text-decoration: none;
+    opacity: .9;
+}
+
+.dropdown-content .header-notif a:hover {
+    opacity: 1;
+    text-decoration: underline;
+}
+
+/* ---- Items de notificación ---- */
+.dropdown-content .item {
+    display: block;
+    padding: .8rem 1rem;
+    border-bottom: 1px solid #f1f1f1;
+    text-decoration: none;
+    color: #1A1A1A;
+    transition: background .15s ease;
+    position: relative;
+    padding-left: 1.2rem;
+}
+
+.dropdown-content .item:hover {
+    background: #FFFAE9;
+}
+
+/* Barra lateral de color según el tipo */
+.dropdown-content .item::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+    background: #ccc;
+}
+
+/* No leída: fondo amarillo claro + barra vino */
+.dropdown-content .item.no-leida {
+    background: #FFF7E0;
+    font-weight: 600;
+}
+
+.dropdown-content .item.no-leida::before {
+    background: #A6184B;
+}
+
+.dropdown-content .item.no-leida:hover {
+    background: #FFEFC2;
+}
+
+/* Leída: más discreta */
+.dropdown-content .item:not(.no-leida) {
+    opacity: .75;
+}
+
+.dropdown-content .item:not(.no-leida)::before {
+    background: #e0e0e0;
+}
+
+/* ---- Color por tipo ---- */
+.dropdown-content .item[data-tipo="recordatorio_hoy"]::before    { background: #E5074C; }
+.dropdown-content .item[data-tipo="recordatorio_manana"]::before { background: #F08217; }
+.dropdown-content .item[data-tipo="mensaje"]::before             { background: #266CB4; }
+.dropdown-content .item[data-tipo="sistema"]::before             { background: #8F4889; }
+
+/* ---- Título del mensaje ---- */
+.dropdown-content .item .titulo-notif {
+    font-size: .78rem;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    font-weight: 700;
+    color: #A6184B;
+    margin-bottom: .2rem;
+}
+
+.dropdown-content .item .texto-notif {
+    font-size: .85rem;
+    line-height: 1.35;
+    color: #1A1A1A;
+}
+
+.dropdown-content .item .fecha-notif {
+    font-size: .7rem;
+    color: #55585A;
+    margin-top: .3rem;
+    display: block;
+}
+
+/* ---- Cuando está vacío ---- */
+.dropdown-content .vacio {
+    padding: 2rem 1rem;
+    text-align: center;
+    color: #55585A;
+    font-size: .9rem;
+}
+
+.dropdown-content .vacio::before {
+    content: '🔔';
+    display: block;
+    font-size: 2rem;
+    margin-bottom: .5rem;
+    opacity: .5;
+}
+
+/* ============================================================
+   PÁGINA DE NOTIFICACIONES (lista completa)
+   ============================================================ */
+
+.notif-item {
+    display: block;
+    text-decoration: none;
+    color: inherit;
+    padding: 1rem 1rem 1rem 1.4rem;
+    border-bottom: 1px solid #eee;
+    position: relative;
+    transition: background .15s ease;
+}
+
+.notif-item:hover {
+    background: #FFFAE9 !important;
+}
+
+.notif-item.no-leida {
+    background: #FFF7E0;
+}
+
+.notif-item.leida {
+    background: #fff;
+    opacity: .78;
+}
+
+.notif-item .barra-lateral {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 4px;
+}
+
+.notif-item.leida .barra-lateral {
+    background: #ddd !important;
+}
+
+.notif-item .etiqueta {
+    font-size: .72rem;
+    text-transform: uppercase;
+    letter-spacing: .5px;
+    font-weight: 700;
+    margin-bottom: .2rem;
+}
+
+.notif-item .mensaje {
+    font-size: .9rem;
+    line-height: 1.4;
+}
+
+.notif-item.leida .mensaje {
+    color: var(--gris-mid);
+}
+
+.notif-item.no-leida .mensaje {
+    color: var(--tinta);
+    font-weight: 600;
+}
+
+.notif-item .fecha {
+    font-size: .75rem;
+    color: var(--gris-mid);
+    white-space: nowrap;
+}
+
+.notif-item .badge-nueva {
+    display: inline-block;
+    margin-top: .4rem;
+    background: var(--vino);
+    color: #fff;
+    font-size: .7rem;
+    padding: .15rem .5rem;
+    border-radius: 999px;
+    font-weight: 700;
+}

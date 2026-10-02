@@ -35,11 +35,17 @@
         <a href="/mensajes">Mensajes</a>
 
         <div class="dropdown-notif">
-            <a href="#" id="campanita">🔔 <span id="notif-count" class="badge">0</span></a>
-            <div class="dropdown-content" id="notif-list">
-                <p class="text-muted">Sin notificaciones</p>
-            </div>
+    <a href="#" id="campanita" title="Notificaciones">
+        🔔 <span id="notif-count" class="badge">0</span>
+    </a>
+    <div class="dropdown-content" id="notif-list">
+        <div class="header-notif">
+            <span>🔔 Notificaciones</span>
+            <a href="/notificaciones">Ver todas</a>
         </div>
+        <div class="vacio">Sin notificaciones</div>
+    </div>
+</div>
 
         <div class="accessibility-menu">
             <button type="button" class="accessibility-trigger" id="accessibilityToggle"

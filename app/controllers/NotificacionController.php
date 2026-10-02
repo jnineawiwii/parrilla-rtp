@@ -22,21 +22,27 @@ class NotificacionController {
     }
 
     public function api(): void {
-        if (!Auth::check()) Response::json(['no_leidas' => 0, 'items' => []]);
+        if (!Auth::check()) {
+            Response::json(['no_leidas' => 0, 'items' => []]);
+        }
         $uid = (int)Auth::user()['id'];
         $items = Notificacion::deUsuario($uid, 10);
 
         // Contar no leídas
         $noLeidas = 0;
-        foreach ($items as $i) if (!$i['leido']) $noLeidas++;
+        foreach ($items as $i) {
+            if (empty($i['leida'])) {
+                $noLeidas++;
+            }
+        }
 
-        // Renombrar campos para que el JS no cambie
+        // Renombrar campos para el JS (nombres esperados por notificaciones.js)
         $itemsJS = array_map(function ($i) {
             return [
                 'id'         => $i['id'],
-                'titulo'     => $i['tipo_notificacion'] ?? 'Notificación',
+                'titulo'     => $i['titulo'] ?? 'Notificación',
                 'mensaje'    => $i['mensaje'],
-                'leida'      => (bool)$i['leido'],
+                'leida'      => (bool)($i['leida'] ?? false),
                 'created_at' => $i['created_at'],
             ];
         }, $items);
