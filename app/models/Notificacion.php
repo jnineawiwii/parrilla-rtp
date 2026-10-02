@@ -1,22 +1,36 @@
 <?php
 class Notificacion {
+
     /**
-     * Devuelve las notificaciones de un usuario con nombres
-     * de columnas "amigables" para las vistas (id, titulo, mensaje, leida, created_at)
+     * Devuelve las notificaciones visibles de un usuario.
+     * Excluye las notificaciones de recordatorio cuya publicación
+     * ya pasó de fecha o ya está publicada/cancelada.
      */
     public static function deUsuario(int $uid, int $limite = 30): array {
         $st = db()->prepare("
             SELECT
-                id_notificacion         AS id,
-                id_publicacion,
-                id_usuario,
-                mensaje,
-                tipo_notificacion       AS titulo,
-                leido                   AS leida,
-                creado_en               AS created_at
-            FROM gestion_notificaciones
-            WHERE id_usuario = ?
-            ORDER BY creado_en DESC
+                n.id_notificacion         AS id,
+                n.id_publicacion,
+                n.id_usuario,
+                n.mensaje,
+                n.tipo_notificacion       AS titulo,
+                n.leido                   AS leida,
+                n.creado_en               AS created_at
+            FROM gestion_notificaciones n
+            LEFT JOIN gestion_publicaciones p
+                   ON p.id_publicacion = n.id_publicacion
+            WHERE n.id_usuario = ?
+              AND (
+                    -- Notificaciones que no son recordatorio: siempre visibles
+                    n.tipo_notificacion NOT IN ('recordatorio_hoy','recordatorio_manana')
+                    OR (
+                        -- Recordatorios: solo si la publicación aún no ha pasado
+                        n.tipo_notificacion IN ('recordatorio_hoy','recordatorio_manana')
+                        AND p.fecha_publicacion::date >= CURRENT_DATE
+                        AND p.estado NOT IN ('Publicado','Cancelado')
+                    )
+                  )
+            ORDER BY n.creado_en DESC
             LIMIT ?
         ");
         $st->bindValue(1, $uid, PDO::PARAM_INT);
@@ -49,10 +63,25 @@ class Notificacion {
         ")->execute([$uid, $idPub, $mensaje, $tipo]);
     }
 
+    /**
+     * Cuenta SOLO las notificaciones visibles (no vencidas).
+     */
     public static function noLeidas(int $uid): int {
         $st = db()->prepare("
-            SELECT COUNT(*) FROM gestion_notificaciones
-            WHERE id_usuario = ? AND leido = FALSE
+            SELECT COUNT(*)
+            FROM gestion_notificaciones n
+            LEFT JOIN gestion_publicaciones p
+                   ON p.id_publicacion = n.id_publicacion
+            WHERE n.id_usuario = ?
+              AND n.leido = FALSE
+              AND (
+                    n.tipo_notificacion NOT IN ('recordatorio_hoy','recordatorio_manana')
+                    OR (
+                        n.tipo_notificacion IN ('recordatorio_hoy','recordatorio_manana')
+                        AND p.fecha_publicacion::date >= CURRENT_DATE
+                        AND p.estado NOT IN ('Publicado','Cancelado')
+                    )
+                  )
         ");
         $st->execute([$uid]);
         return (int)$st->fetchColumn();

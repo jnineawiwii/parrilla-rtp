@@ -140,5 +140,20 @@ foreach ($manana as $pub) {
         ]);
     }
 }
+// ============================================================
+// 4. Limpieza: borrar notificaciones de recordatorio vencidas
+// ============================================================
+$borradas = db()->exec("
+    DELETE FROM gestion_notificaciones n
+    USING gestion_publicaciones p
+    WHERE n.id_publicacion = p.id_publicacion
+      AND n.tipo_notificacion IN ('recordatorio_hoy','recordatorio_manana')
+      AND (
+            p.fecha_publicacion::date < CURRENT_DATE
+         OR p.estado IN ('Publicado','Cancelado')
+      )
+");
+
+logMsg('Notificaciones vencidas borradas: ' . $borradas);
 
 logMsg('=== Fin de generación ===');
