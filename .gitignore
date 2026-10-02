@@ -10,3 +10,5 @@
 Thumbs.db
 # Config local por máquina
 config/config.php
+
+composer.phar
