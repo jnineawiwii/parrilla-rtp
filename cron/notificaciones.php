@@ -1,17 +1,18 @@
 <?php
 /**
  * Script de recordatorios automáticos
- * Se ejecuta 1 vez al día (por ejemplo a las 7:00 AM).
+ * Ejecutar 1 vez al día (ej. 7:00 AM) vía cron.
  *
- * Crea notificaciones para:
- *  - Publicaciones de HOY
- *  - Publicaciones de MAÑANA
+ * Notifica a:
+ *   - id_usuario_responsable
+ *   - id_usuario_produccion
+ *   - id_usuario_postproduccion
+ * de cada publicación de HOY y MAÑANA.
  */
 
 require __DIR__ . '/../config/config.php';
 require __DIR__ . '/../config/database.php';
 
-// Autoload simple
 spl_autoload_register(function ($clase) {
     foreach ([
         APP_ROOT . '/app/models/'  . $clase . '.php',
@@ -21,42 +22,80 @@ spl_autoload_register(function ($clase) {
     }
 });
 
-// ============================================================
-// Configuración
-// ============================================================
 $logFile = APP_ROOT . '/storage/logs/notificaciones.log';
 
 function logMsg(string $msg): void {
     global $logFile;
     $linea = '[' . date('Y-m-d H:i:s') . '] ' . $msg . PHP_EOL;
-    file_put_contents($logFile, $linea, FILE_APPEND);
+    @file_put_contents($logFile, $linea, FILE_APPEND);
     echo $linea;
 }
 
 logMsg('=== Inicio de generación de recordatorios ===');
 
-// ============================================================
-// 1. Obtener usuarios activos (solo admin y editor, que son
-//    los que pueden intervenir en publicaciones)
-// ============================================================
-$usuarios = db()->query("
-    SELECT id_usuario, nombre_completo, rol
-    FROM gestion_usuarios
-    WHERE rol IN ('admin','editor')
-")->fetchAll();
-
-if (empty($usuarios)) {
-    logMsg('No hay usuarios admin/editor activos.');
-    exit(0);
+/**
+ * Extrae los IDs únicos de usuarios vinculados a una publicación
+ * (responsable, producción, postproducción), filtrando nulos y duplicados.
+ */
+function responsablesDe(array $pub): array {
+    $ids = [
+        $pub['id_usuario_responsable']    ?? null,
+        $pub['id_usuario_produccion']     ?? null,
+        $pub['id_usuario_postproduccion'] ?? null,
+    ];
+    $ids = array_filter($ids, fn($v) => !empty($v));
+    return array_values(array_unique(array_map('intval', $ids)));
 }
 
-logMsg('Usuarios a notificar: ' . count($usuarios));
+/**
+ * Crea las notificaciones para un conjunto de publicaciones.
+ */
+function procesarPublicaciones(array $publicaciones, string $tipo, string $prefijo): void {
+    foreach ($publicaciones as $pub) {
+        $ids = responsablesDe($pub);
+
+        if (empty($ids)) {
+            logMsg("  ⚠ Publicación #{$pub['id_publicacion']} sin responsables, se omite.");
+            continue;
+        }
+
+        $hora = $pub['fecha_publicacion']
+              ? date('H:i', strtotime($pub['fecha_publicacion']))
+              : 'sin hora';
+
+        $mensaje = $prefijo . ' se publica: "' . $pub['titulo'] . '" a las ' . $hora;
+
+        foreach ($ids as $uid) {
+            // Evitar duplicados del mismo día
+            $st = db()->prepare("
+                SELECT 1 FROM gestion_notificaciones
+                WHERE id_usuario = ?
+                  AND id_publicacion = ?
+                  AND tipo_notificacion = ?
+                  AND creado_en::date = CURRENT_DATE
+                LIMIT 1
+            ");
+            $st->execute([$uid, $pub['id_publicacion'], $tipo]);
+
+            if ($st->fetchColumn()) continue;
+
+            db()->prepare("
+                INSERT INTO gestion_notificaciones
+                    (id_usuario, id_publicacion, mensaje, tipo_notificacion)
+                VALUES (?, ?, ?, ?)
+            ")->execute([$uid, $pub['id_publicacion'], $mensaje, $tipo]);
+        }
+
+        logMsg("  ✓ #{$pub['id_publicacion']} → " . count($ids) . " responsable(s)");
+    }
+}
 
 // ============================================================
-// 2. Publicaciones de HOY (que aún no se han publicado)
+// 1. Publicaciones de HOY
 // ============================================================
 $hoy = db()->query("
-    SELECT id_publicacion, titulo, fecha_publicacion, estado
+    SELECT id_publicacion, titulo, fecha_publicacion, estado,
+           id_usuario_responsable, id_usuario_produccion, id_usuario_postproduccion
     FROM gestion_publicaciones
     WHERE fecha_publicacion::date = CURRENT_DATE
       AND estado IN ('Borrador','Programado','Aprobado')
@@ -64,44 +103,14 @@ $hoy = db()->query("
 ")->fetchAll();
 
 logMsg('Publicaciones de HOY: ' . count($hoy));
-
-foreach ($hoy as $pub) {
-    foreach ($usuarios as $u) {
-        // Evitar duplicados: verificar si ya existe una notificación
-        // igual creada hoy
-        $st = db()->prepare("
-            SELECT 1 FROM gestion_notificaciones
-            WHERE id_usuario = ?
-              AND id_publicacion = ?
-              AND tipo_notificacion = 'recordatorio_hoy'
-              AND creado_en::date = CURRENT_DATE
-            LIMIT 1
-        ");
-        $st->execute([$u['id_usuario'], $pub['id_publicacion']]);
-
-        if ($st->fetchColumn()) continue; // Ya existe
-
-        $hora = $pub['fecha_publicacion']
-              ? date('H:i', strtotime($pub['fecha_publicacion']))
-              : 'sin hora';
-
-        db()->prepare("
-            INSERT INTO gestion_notificaciones
-                (id_usuario, id_publicacion, mensaje, tipo_notificacion)
-            VALUES (?, ?, ?, 'recordatorio_hoy')
-        ")->execute([
-            $u['id_usuario'],
-            $pub['id_publicacion'],
-            '📅 HOY se publica: "' . $pub['titulo'] . '" a las ' . $hora
-        ]);
-    }
-}
+procesarPublicaciones($hoy, 'recordatorio_hoy', '📅 HOY');
 
 // ============================================================
-// 3. Publicaciones de MAÑANA
+// 2. Publicaciones de MAÑANA
 // ============================================================
 $manana = db()->query("
-    SELECT id_publicacion, titulo, fecha_publicacion, estado
+    SELECT id_publicacion, titulo, fecha_publicacion, estado,
+           id_usuario_responsable, id_usuario_produccion, id_usuario_postproduccion
     FROM gestion_publicaciones
     WHERE fecha_publicacion::date = (CURRENT_DATE + INTERVAL '1 day')
       AND estado IN ('Borrador','Programado','Aprobado')
@@ -109,39 +118,10 @@ $manana = db()->query("
 ")->fetchAll();
 
 logMsg('Publicaciones de MAÑANA: ' . count($manana));
+procesarPublicaciones($manana, 'recordatorio_manana', '⏰ MAÑANA');
 
-foreach ($manana as $pub) {
-    foreach ($usuarios as $u) {
-        // Evitar duplicados
-        $st = db()->prepare("
-            SELECT 1 FROM gestion_notificaciones
-            WHERE id_usuario = ?
-              AND id_publicacion = ?
-              AND tipo_notificacion = 'recordatorio_manana'
-              AND creado_en::date = CURRENT_DATE
-            LIMIT 1
-        ");
-        $st->execute([$u['id_usuario'], $pub['id_publicacion']]);
-
-        if ($st->fetchColumn()) continue;
-
-        $hora = $pub['fecha_publicacion']
-              ? date('H:i', strtotime($pub['fecha_publicacion']))
-              : 'sin hora';
-
-        db()->prepare("
-            INSERT INTO gestion_notificaciones
-                (id_usuario, id_publicacion, mensaje, tipo_notificacion)
-            VALUES (?, ?, ?, 'recordatorio_manana')
-        ")->execute([
-            $u['id_usuario'],
-            $pub['id_publicacion'],
-            '⏰ MAÑANA se publica: "' . $pub['titulo'] . '" a las ' . $hora
-        ]);
-    }
-}
 // ============================================================
-// 4. Limpieza: borrar notificaciones de recordatorio vencidas
+// 3. Limpieza de recordatorios vencidos
 // ============================================================
 $borradas = db()->exec("
     DELETE FROM gestion_notificaciones n
@@ -155,5 +135,4 @@ $borradas = db()->exec("
 ");
 
 logMsg('Notificaciones vencidas borradas: ' . $borradas);
-
-logMsg('=== Fin de generación ===');
+logMsg('=== Fin ===');

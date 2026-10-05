@@ -1,22 +1,30 @@
 /**
  * Campanita de notificaciones
- * Consulta /api/notificaciones cada 60 segundos.
+ * - Consulta /api/notificaciones al cargar, cada 60s y al abrir el dropdown.
  */
 (function () {
+    'use strict';
+
     const campanita = document.getElementById('campanita');
     const lista     = document.getElementById('notif-list');
     const contador  = document.getElementById('notif-count');
 
-    if (!campanita) return;
+    if (!campanita) {
+        console.warn('[Notif] No se encontró #campanita en el DOM.');
+        return;
+    }
 
-    // ---------- Abrir / cerrar el dropdown ----------
+    // ---------- Abrir / cerrar ----------
     campanita.addEventListener('click', function (e) {
         e.preventDefault();
         const padre = campanita.closest('.dropdown-notif');
-        if (padre) padre.classList.toggle('abierto');
+        if (!padre) return;
+        padre.classList.toggle('abierto');
+        if (padre.classList.contains('abierto')) {
+            cargarNotifs();   // refrescar al abrir
+        }
     });
 
-    // Cerrar al hacer clic fuera
     document.addEventListener('click', function (e) {
         const padre = campanita.closest('.dropdown-notif');
         if (padre && !padre.contains(e.target)) {
@@ -24,31 +32,37 @@
         }
     });
 
-    // ---------- Escapar HTML ----------
+    // ---------- Helpers ----------
     function escapar(str) {
         const div = document.createElement('div');
         div.textContent = str ?? '';
         return div.innerHTML;
     }
 
-    // ---------- Formato de fecha relativo ----------
+    function normalizarFecha(iso) {
+        if (!iso) return null;
+        // 'YYYY-MM-DD HH:MM:SS' → 'YYYY-MM-DDTHH:MM:SS'
+        const s = String(iso).replace(' ', 'T');
+        const d = new Date(s);
+        return isNaN(d.getTime()) ? null : d;
+    }
+
     function fechaRelativa(iso) {
-        const fecha = new Date(iso);
-        const ahora = new Date();
-        const diff  = Math.floor((ahora - fecha) / 1000); // segundos
+        const fecha = normalizarFecha(iso);
+        if (!fecha) return '';
 
-        if (diff < 60)        return 'hace unos segundos';
-        if (diff < 3600)      return 'hace ' + Math.floor(diff / 60) + ' min';
-        if (diff < 86400)     return 'hace ' + Math.floor(diff / 3600) + ' h';
-        if (diff < 604800)    return 'hace ' + Math.floor(diff / 86400) + ' días';
+        const diff = Math.floor((Date.now() - fecha.getTime()) / 1000);
+        if (diff < 0)      return 'ahora';
+        if (diff < 60)     return 'hace unos segundos';
+        if (diff < 3600)   return 'hace ' + Math.floor(diff / 60) + ' min';
+        if (diff < 86400)  return 'hace ' + Math.floor(diff / 3600) + ' h';
+        if (diff < 604800) return 'hace ' + Math.floor(diff / 86400) + ' días';
 
-        // Más de una semana: fecha completa
         return fecha.toLocaleDateString('es-MX', {
             day: '2-digit', month: 'short', year: 'numeric'
         });
     }
 
-    // ---------- Etiqueta amigable según tipo ----------
     function etiquetaTipo(tipo) {
         switch (tipo) {
             case 'recordatorio_hoy':    return '📅 HOY';
@@ -59,8 +73,13 @@
         }
     }
 
-    // ---------- Cargar notificaciones ----------
+    // ---------- Cargar ----------
+    let cargando = false;
+
     async function cargarNotifs() {
+        if (cargando) return;
+        cargando = true;
+
         try {
             const r = await fetch('/api/notificaciones', {
                 credentials: 'same-origin',
@@ -68,7 +87,7 @@
             });
 
             if (!r.ok) {
-                console.warn('[Notif] Respuesta no OK:', r.status);
+                console.warn('[Notif] HTTP', r.status);
                 return;
             }
 
@@ -76,37 +95,36 @@
 
             // Contador
             if (contador) {
-                const n = j.no_leidas || 0;
+                const n = Number(j.no_leidas) || 0;
                 contador.textContent = n;
                 contador.style.display = (n > 0) ? 'inline-block' : 'none';
-
-                // Pulso si hay nuevas
-                if (n > 0) contador.classList.add('pulso');
-                else       contador.classList.remove('pulso');
+                contador.classList.toggle('pulso', n > 0);
             }
 
-            // Lista
             if (!lista) return;
 
-            // Conservar encabezado, regenerar solo el cuerpo
-            const header = '<div class="header-notif">' +
-                           '<span>🔔 Notificaciones</span>' +
-                           '<a href="/notificaciones">Ver todas</a>' +
-                           '</div>';
+            const header =
+                '<div class="header-notif">' +
+                '<span>🔔 Notificaciones</span>' +
+                '<a href="/notificaciones">Ver todas</a>' +
+                '</div>';
 
-            if (!j.items || j.items.length === 0) {
+            const items = Array.isArray(j.items) ? j.items : [];
+
+            if (items.length === 0) {
                 lista.innerHTML = header + '<div class="vacio">Sin notificaciones</div>';
                 return;
             }
 
-            const cuerpo = j.items.map(n => {
-                const fecha   = fechaRelativa(n.created_at);
-                const tipo    = n.titulo || 'sistema';
+            const cuerpo = items.map(n => {
+                const id       = parseInt(n.id, 10) || 0;
+                const tipo     = n.titulo || 'sistema';
                 const etiqueta = etiquetaTipo(tipo);
-                const clase   = n.leida ? '' : 'no-leida';
+                const clase    = n.leida ? '' : 'no-leida';
+                const fecha    = fechaRelativa(n.created_at);
 
                 return `
-                    <a href="/notificaciones/abrir/${n.id}"
+                    <a href="/notificaciones/abrir/${id}"
                        class="item ${clase}"
                        data-tipo="${escapar(tipo)}">
                         <div class="titulo-notif">${etiqueta}</div>
@@ -117,12 +135,19 @@
             }).join('');
 
             lista.innerHTML = header + cuerpo;
+
         } catch (e) {
             console.error('[Notif] Error:', e);
+        } finally {
+            cargando = false;
         }
     }
 
-    // Cargar al inicio y cada 60 segundos
+    // ---------- Disparadores ----------
     cargarNotifs();
     setInterval(cargarNotifs, 60000);
+
+    document.addEventListener('visibilitychange', function () {
+        if (document.visibilityState === 'visible') cargarNotifs();
+    });
 })();
