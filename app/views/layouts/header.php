@@ -10,7 +10,9 @@
     <script src="/js/accesibilidad.js" defer></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js" defer></script>
     <script src="/js/app.js" defer></script>
-    <script src="/js/notificaciones.js" defer></script>
+    <?php if (empty($soloGraficas) && Auth::can('notificaciones.ver')): ?>
+        <script src="/js/notificaciones.js" defer></script>
+    <?php endif; ?>
     <?php if (!empty($cargarGraficas)): ?>
         <script src="/js/graficas.js" defer></script>
     <?php endif; ?>
@@ -30,14 +32,18 @@
         <!-- LADO IZQUIERDO: navegación     -->
         <!-- ============================== -->
         <div class="nav-left">
-            <a href="/parrilla">Parrilla</a>
+            <?php if (Auth::can('parrilla.ver')): ?>
+                <a href="/parrilla">Parrilla</a>
+            <?php endif; ?>
             <?php if (Auth::can('metricas.ver')): ?>
                 <a href="/graficas">Gráficas</a>
             <?php endif; ?>
             <?php if (Auth::can('usuarios.ver')): ?>
                 <a href="/usuarios">Usuarios</a>
             <?php endif; ?>
-            <a href="/mensajes">Mensajes</a>
+            <?php if (Auth::can('mensajes.usar')): ?>
+                <a href="/mensajes">Mensajes</a>
+            <?php endif; ?>
         </div>
 
         <!-- ============================== -->
@@ -46,6 +52,7 @@
         <div class="nav-right">
 
             <!-- Campanita de notificaciones -->
+            <?php if (Auth::can('notificaciones.ver')): ?>
             <div class="dropdown-notif">
                 <a href="#" id="campanita" title="Notificaciones">
                     🔔 <span id="notif-count" class="badge">0</span>
@@ -58,6 +65,7 @@
                     <div class="vacio">Sin notificaciones</div>
                 </div>
             </div>
+            <?php endif; ?>
 
             <!-- Nombre de usuario -->
             <span class="user-info">
@@ -123,6 +131,7 @@
 </header>
 <?php endif; ?>
 <main class="container">
+<?php if (empty($soloGraficas)): ?>
 <?php if (!empty($_SESSION['flash_ok'])): ?>
     <div class="alert alert-ok" role="alert"><?= htmlspecialchars($_SESSION['flash_ok']) ?></div>
     <?php unset($_SESSION['flash_ok']); ?>
@@ -130,4 +139,5 @@
 <?php if (!empty($_SESSION['flash_error'])): ?>
     <div class="alert alert-err" role="alert"><?= htmlspecialchars($_SESSION['flash_error']) ?></div>
     <?php unset($_SESSION['flash_error']); ?>
+<?php endif; ?>
 <?php endif; ?>

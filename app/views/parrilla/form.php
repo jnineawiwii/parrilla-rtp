@@ -194,75 +194,79 @@ $sel = function($k, $id) use ($registro) {
         </fieldset>
 
         <!-- MÉTRICAS (solo admin/editor) -->
-        <?php if (Auth::can('metricas.editar')): ?>
-        <fieldset class="border rounded p-3 mb-2">
-            <legend class="fs-6" style="color:var(--vino); font-weight:600;">📊 Métricas por red</legend>
-            <p class="text-muted" style="font-size:.85rem;">Llena solo las redes donde se publicó. Se guardan en la BD y alimentan las gráficas.</p>
+        <!-- MÉTRICAS (solo admin/editor) -->
+<?php if (Auth::can('metricas.editar')): ?>
+<fieldset class="border rounded p-3 mb-2">
+    <legend class="fs-6" style="color:var(--vino); font-weight:600;">📊 Métricas por red</legend>
+    <p class="text-muted" style="font-size:.85rem;">Llena solo las redes donde se publicó.</p>
 
-            <?php
-            // Cargar valores guardados si es edición
-            $metricasGuardadas = [];
-            if ($esEdicion) {
-                foreach (Metrica::porPublicacion((int)$registro['id_publicacion']) as $m) {
-                    $metricasGuardadas[$m['red']] = $m;
-                }
-            }
-            $redes = [
-                'facebook'  => 'Facebook',
-                'instagram' => 'Instagram',
-                'x'         => 'X (Twitter)',
-                'youtube'   => 'YouTube',
-            ];
-            $campos = [
-                'alcance'=>'Alcance','impresiones'=>'Impresiones','me_gusta'=>'Me gusta',
-                'comentarios'=>'Comentarios','compartidos'=>'Compartidos','interaccion'=>'Interacción',
-                'reproducciones'=>'Reproducciones','coment_positivos'=>'Coment. +',
-                'coment_negativos'=>'Coment. −','coment_neutros'=>'Coment. neutros',
-            ];
-            $reaccionesFacebook = [
-                'fb_me_gusta' => 'Me gusta',
-                'fb_me_encanta' => 'Me encanta',
-                'fb_me_entristece' => 'Me entristece',
-                'fb_me_sorprende' => 'Me sorprende',
-                'fb_me_enoja' => 'Me enoja',
-                'fb_me_importa' => 'Me importa',
-            ];
-            foreach ($redes as $red => $nom):
-                $mg = $metricasGuardadas[$red] ?? [];
-            ?>
-                <details style="margin-bottom:.5rem; border:1px solid #eee; border-radius:6px; padding:.5rem;"
-                         <?= !empty($mg) ? 'open' : '' ?>>
-                    <summary style="cursor:pointer; font-weight:600; color:var(--vino);"><?= $nom ?></summary>
-                    <div class="row mt-1">
-                        <?php foreach ($campos as $k => $lbl): ?>
-                            <?php if ($red === 'facebook' && $k === 'me_gusta') continue; ?>
-                            <div class="col" style="flex:1 1 130px;">
-                                <label class="form-label" style="font-size:.75rem;"><?= $lbl ?></label>
-                                <input type="number" min="0" class="form-control"
-                                       name="metrica[<?= $red ?>][<?= $k ?>]"
-                                       value="<?= (int)($mg[$k] ?? 0) ?>">
-                            </div>
-                        <?php endforeach; ?>
-                        <?php if ($red === 'facebook'): ?>
-                            <div class="col" style="flex:1 1 100%;">
-                                <strong class="metric-reaction-heading">Reacciones de Facebook</strong>
-                            </div>
-                            <?php foreach ($reaccionesFacebook as $k => $lbl): ?>
-                                <div class="col" style="flex:1 1 130px;">
-                                    <label class="form-label" for="<?= $k ?>" style="font-size:.75rem;"><?= $lbl ?></label>
-                                    <input type="number" min="0" id="<?= $k ?>" class="form-control facebook-reaction"
-                                           name="metrica[facebook][<?= $k ?>]" value="<?= (int)($mg[$k] ?? 0) ?>">
-                                </div>
-                            <?php endforeach; ?>
-                            <div class="col" style="flex:1 1 130px;">
-                                <label class="form-label" for="facebook-total-reacciones" style="font-size:.75rem;">Total de reacciones</label>
-                                <input type="number" id="facebook-total-reacciones" class="form-control" value="0" readonly>
-                                <input type="hidden" name="metrica[facebook][me_gusta]" id="facebook-total-hidden" value="<?= (int)($mg['me_gusta'] ?? 0) ?>">
-                            </div>
-                        <?php endif; ?>
+    <?php
+    // Cargar valores guardados si es edición
+    $metricasGuardadas = [];
+    if ($esEdicion) {
+        foreach (Metrica::porPublicacion((int)$registro['id_publicacion']) as $m) {
+            $metricasGuardadas[$m['red']] = $m;
+        }
+    }
+
+    // Definición de campos por red (SOLO los relevantes)
+    $redes = [
+        'facebook' => [
+            'nombre' => 'Facebook',
+            'campos' => [
+                'reacciones'  => 'Reacciones',
+                'comentarios' => 'Comentarios',
+                'interaccion' => 'Interacción',
+                'compartidos' => 'Compartidos',
+            ],
+        ],
+        'instagram' => [
+            'nombre' => 'Instagram',
+            'campos' => [
+                'me_gusta'    => 'Me gusta',
+                'comentarios' => 'Comentarios',
+                'compartidos' => 'Compartidos',
+            ],
+        ],
+        'x' => [
+            'nombre' => 'X (Twitter)',
+            'campos' => [
+                'me_gusta'    => 'Me gusta',
+                'comentarios' => 'Comentarios',
+                'compartidos' => 'Compartidos',
+            ],
+        ],
+        'youtube' => [
+            'nombre' => 'YouTube',
+            'campos' => [
+                'me_gusta'    => 'Likes',
+                'comentarios' => 'Comentarios',
+                'vistas'      => 'Vistas',
+            ],
+        ],
+    ];
+
+    foreach ($redes as $red => $info):
+        $mg = $metricasGuardadas[$red] ?? [];
+    ?>
+        <details style="margin-bottom:.5rem; border:1px solid #eee; border-radius:6px; padding:.5rem;"
+                 <?= !empty($mg) ? 'open' : '' ?>>
+            <summary style="cursor:pointer; font-weight:600; color:var(--vino);">
+                <?= htmlspecialchars($info['nombre']) ?>
+            </summary>
+            <div class="row mt-1">
+                <?php foreach ($info['campos'] as $k => $lbl): ?>
+                    <div class="col" style="flex:1 1 140px;">
+                        <label class="form-label" style="font-size:.75rem;"><?= $lbl ?></label>
+                        <input type="number" min="0" class="form-control"
+                               name="metrica[<?= $red ?>][<?= $k ?>]"
+                               value="<?= (int)($mg[$k] ?? 0) ?>">
                     </div>
-                </details>
-            <?php endforeach; ?>
+                <?php endforeach; ?>
+            </div>
+        </details>
+    <?php endforeach; ?>
+
         </fieldset>
         <?php endif; ?>
 

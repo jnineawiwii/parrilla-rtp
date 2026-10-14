@@ -26,20 +26,26 @@ class Auth {
         return self::user()['rol'] ?? null;
     }
 
+    public static function homeUrl(): string {
+        return self::can('metricas.ver') && !self::can('parrilla.ver')
+            ? '/graficas'
+            : '/parrilla';
+    }
+
     public static function can(string $accion): bool {
         $rol = self::role();
         if (!$rol) return false;
         $matriz = [
-            'parrilla.ver'         => ['admin','editor','lector'],
+            'parrilla.ver'         => ['admin','editor'],
             'parrilla.crear'       => ['admin','editor'],
             'parrilla.editar'      => ['admin','editor'],
             'parrilla.borrar'      => ['admin'],
-            'metricas.ver'         => ['admin'],
+            'metricas.ver'         => ['admin','lector'],
             'metricas.editar'      => ['admin','editor'],
             'usuarios.ver'         => ['admin'],
             'usuarios.editar'      => ['admin'],
-            'notificaciones.ver'   => ['admin','editor','lector'],
-            'mensajes.usar'        => ['admin','editor','lector'],
+            'notificaciones.ver'   => ['admin','editor'],
+            'mensajes.usar'        => ['admin','editor'],
             'parrilla.aprobar'     => ['admin'],
             'parrilla.rechazar'    => ['admin'],
         ];
@@ -52,6 +58,9 @@ class Auth {
             exit;
         }
         if (!self::can($accion)) {
+            if (self::can('metricas.ver') && !self::can('parrilla.ver')) {
+                Response::redirect('/graficas');
+            }
             http_response_code(403);
             require APP_ROOT . '/app/views/errors/403.php';
             exit;

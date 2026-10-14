@@ -26,6 +26,10 @@ class NotificacionController {
         Response::json(['no_leidas' => 0, 'items' => []]);
         return;   // ✅ sin esto, sigue y explota
     }
+    if (!Auth::can('notificaciones.ver')) {
+        Response::json(['error' => 'Acceso denegado'], 403);
+        return;
+    }
 
     $uid   = (int)Auth::user()['id'];
     $items = Notificacion::deUsuario($uid, 10);

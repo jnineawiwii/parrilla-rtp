@@ -1,6 +1,7 @@
 <?php
-$titulo = 'Gráficas';
+$titulo         = 'Gráficas';
 $cargarGraficas = true;
+$soloGraficas   = true;
 ?>
 
 <div class="card">
@@ -8,86 +9,98 @@ $cargarGraficas = true;
         <h2 style="margin:0; color:var(--vino);">📊 Estadísticas de redes sociales</h2>
         <form method="GET" action="/graficas" class="d-flex gap-1">
             <label class="sr-only" for="anioGrafica">Año</label>
-            <select name="anio" class="form-select" onchange="this.form.submit()">
+            <select id="anioGrafica" name="anio" class="form-select" onchange="this.form.submit()">
                 <?php for ($y = (int)date('Y'); $y >= 2023; $y--): ?>
-                    <option value="<?= $y ?>" <?= $y === $anio ? 'selected' : '' ?>><?= $y ?></option>
+                    <option value="<?= $y ?>" <?= $y === (int)$anio ? 'selected' : '' ?>><?= $y ?></option>
                 <?php endfor; ?>
             </select>
         </form>
     </div>
-    <p class="text-muted" style="margin:.5rem 0 0; font-size:.9rem;">
-        Año seleccionado: <strong><?= (int)$anio ?></strong>
-    </p>
 </div>
 
+<!-- BARRA DE FILTROS -->
 <div class="card graph-filter-card">
-    <form method="GET" action="/graficas" class="row" style="align-items:flex-end;">
-        <input type="hidden" name="anio" value="<?= (int)$anio ?>">
-        <div class="col" style="flex:1 1 360px;">
-            <label class="form-label" for="publicacionGrafica">Analizar publicación</label>
-            <select id="publicacionGrafica" name="publicacion" class="form-select" onchange="this.form.submit()">
-                <?php if (empty($publicaciones)): ?>
-                    <option value="">No hay publicaciones con métricas en este año</option>
-                <?php else: ?>
-                    <?php foreach ($publicaciones as $publicacion): ?>
-                        <option value="<?= (int)$publicacion['id_publicacion'] ?>"
-                            <?= (int)$publicacion['id_publicacion'] === $publicacionId ? 'selected' : '' ?>>
-                            <?= htmlspecialchars(date('d/m/Y', strtotime($publicacion['fecha_publicacion'])) . ' · ' . $publicacion['titulo']) ?>
-                        </option>
-                    <?php endforeach; ?>
-                <?php endif; ?>
+    <form id="filtrosGraficas" class="row" style="align-items:flex-end; gap:.5rem;">
+        <div class="col" style="flex:1 1 140px;">
+            <label class="form-label" for="fRed">Red</label>
+            <select id="fRed" name="red" class="form-select">
+                <option value="">Todas</option>
+                <?php foreach ($redes as $r): ?>
+                    <option value="<?= htmlspecialchars($r) ?>"><?= Redes::nombre($r) ?></option>
+                <?php endforeach; ?>
             </select>
+        </div>
+
+        <div class="col" style="flex:1 1 160px;">
+            <label class="form-label" for="fPeriodo">Periodo</label>
+            <select id="fPeriodo" name="periodo" class="form-select">
+                <option value="anio">Año completo</option>
+                <option value="mes">Mes actual</option>
+                <option value="15d">Últimos 15 días</option>
+                <option value="dia">Día específico</option>
+                <option value="rango">Rango</option>
+            </select>
+        </div>
+
+        <div class="col" style="flex:1 1 140px;">
+            <label class="form-label" for="fDesde">Desde</label>
+            <input type="date" id="fDesde" name="desde" class="form-control">
+        </div>
+
+        <div class="col" style="flex:1 1 140px;">
+            <label class="form-label" for="fHasta">Hasta</label>
+            <input type="date" id="fHasta" name="hasta" class="form-control">
+        </div>
+
+        <div class="col" style="flex:1 1 180px;">
+            <label class="form-label" for="fTema">Tema</label>
+            <select id="fTema" name="tema_id" class="form-select">
+                <option value="">Todos</option>
+                <?php foreach (($temas ?? []) as $t): ?>
+                    <option value="<?= (int)$t['id_tema'] ?>">
+                        <?= htmlspecialchars($t['nombre_tema']) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+
+        <div class="col" style="flex:0 0 auto;">
+            <button type="submit" class="btn btn-primary">Aplicar</button>
         </div>
     </form>
 </div>
 
+<!-- GRÁFICAS -->
 <div class="graficas-grid">
     <div class="grafica-card">
-        <h3>🥧 Distribución de interacción (pastel)</h3>
+        <h3>🥧 Distribución de interacción por red</h3>
         <canvas id="grafPastel"></canvas>
-        <p class="text-muted" style="font-size:.8rem; text-align:center; margin-top:.5rem;">
-            Porcentaje de interacción por red social.
-        </p>
     </div>
 
     <div class="grafica-card">
-        <h3>🏢 Interacción mensual por red (edificio)</h3>
+        <h3>🏢 Interacción por periodo (apilada por red)</h3>
         <canvas id="grafEdificio"></canvas>
         <p class="text-muted" style="font-size:.8rem; text-align:center; margin-top:.5rem;">
-            Barras verticales apiladas — 12 meses del año.
+            Año → 12 meses · Otros periodos → días.
         </p>
     </div>
 
     <div class="grafica-card">
-        <h3>📈 Alcance por red (barras)</h3>
-        <canvas id="grafAlcance"></canvas>
+        <h3>📈 Totales por red</h3>
+        <canvas id="grafTotales"></canvas>
     </div>
 
     <div class="grafica-card">
-        <h3>💬 Sentimiento de comentarios</h3>
-        <canvas id="grafSentimiento"></canvas>
+        <h3>🏆 Top 10 publicaciones por interacción</h3>
+        <canvas id="grafTop"></canvas>
     </div>
 
     <div class="grafica-card">
-        <h3>📣 Publicación: reacciones, comentarios y compartidos</h3>
-        <canvas id="grafPublicacion"></canvas>
-    </div>
-
-    <div class="grafica-card">
-        <h3>💟 Reacciones de Facebook</h3>
-        <canvas id="grafReaccionesFacebook"></canvas>
-        <p class="text-muted" style="font-size:.8rem; text-align:center; margin-top:.5rem;">
-            Me gusta, Me encanta, Me entristece, Me sorprende, Me enoja y Me importa.
-        </p>
-    </div>
-
-    <div class="grafica-card">
-        <h3>🗣 Comentarios positivos y negativos</h3>
-        <canvas id="grafSentimientoPublicacion"></canvas>
+        <h3>📣 Distribución por campaña</h3>
+        <canvas id="grafCampanas"></canvas>
     </div>
 </div>
 
 <script>
     window.GRAFICAS_ANIO = <?= (int)$anio ?>;
-    window.GRAFICAS_PUBLICACION = <?= (int)$publicacionId ?>;
 </script>

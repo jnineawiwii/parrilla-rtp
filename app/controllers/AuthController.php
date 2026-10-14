@@ -1,7 +1,7 @@
 <?php
 class AuthController {
     public function mostrarLogin(): void {
-        if (Auth::check()) Response::redirect('/parrilla');
+        if (Auth::check()) Response::redirect(Auth::homeUrl());
         require APP_ROOT . '/app/views/auth/login.php';
     }
 
@@ -24,7 +24,7 @@ class AuthController {
             'rol'    => $u['rol'],
         ]);
 
-        Response::redirect('/parrilla');
+        Response::redirect(Auth::homeUrl());
     }
 
     public function logout(): void {

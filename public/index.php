@@ -8,7 +8,10 @@ if (PHP_SAPI === 'cli-server') {
 
 require __DIR__ . '/../config/config.php';
 require __DIR__ . '/../config/database.php';
-
+require_once __DIR__ . '/../app/helpers/Redes.php';
+require_once __DIR__ . '/../app/helpers/Auth.php';
+require_once __DIR__ . '/../app/helpers/Csrf.php';
+// ... los demás
 // Autoload simple de clases (sin composer, opcional)
 spl_autoload_register(function ($clase) {
     foreach ([
