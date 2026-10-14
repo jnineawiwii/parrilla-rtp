@@ -18,7 +18,7 @@ $soloGraficas   = true;
     </div>
 </div>
 
-<!-- BARRA DE FILTROS -->
+<!-- FILTROS -->
 <div class="card graph-filter-card">
     <form id="filtrosGraficas" class="row" style="align-items:flex-end; gap:.5rem;">
         <div class="col" style="flex:1 1 140px;">
@@ -72,6 +72,7 @@ $soloGraficas   = true;
 
 <!-- GRÁFICAS -->
 <div class="graficas-grid">
+
     <div class="grafica-card">
         <h3>🥧 Distribución de interacción por red</h3>
         <canvas id="grafPastel"></canvas>
@@ -99,6 +100,31 @@ $soloGraficas   = true;
         <h3>📣 Distribución por campaña</h3>
         <canvas id="grafCampanas"></canvas>
     </div>
+
+    <div class="grafica-card" style="grid-column:1 / -1;">
+        <h3>📈 Evolución de alcance mensual por red</h3>
+        <canvas id="grafAlcanceMes"></canvas>
+        <p class="text-muted" style="font-size:.8rem; text-align:center; margin-top:.5rem;">
+            Interacción + reacciones + comentarios + compartidos + vistas, por mes.
+        </p>
+    </div>
+
+    <div class="grafica-card" style="grid-column:1 / -1;">
+        <h3>🎬 Rendimiento por formato multimedia</h3>
+        <canvas id="grafFormato"></canvas>
+        <p class="text-muted" style="font-size:.8rem; text-align:center; margin-top:.5rem;">
+            Interacciones totales por tipo de formato.
+        </p>
+    </div>
+
+    <div class="grafica-card" style="grid-column:1 / -1;">
+        <h3>🔥 Mapa de calor: publicaciones por mes × campaña</h3>
+        <div id="heatmapContainer" style="overflow-x:auto;"></div>
+        <p class="text-muted" style="font-size:.8rem; text-align:center; margin-top:.5rem;">
+            Intensidad = número de publicaciones.
+        </p>
+    </div>
+
 </div>
 
 <script>

@@ -6,7 +6,7 @@
         facebook:  { color: '#266CB4', nombre: 'Facebook'  },
         instagram: { color: '#D72F89', nombre: 'Instagram' },
         x:         { color: '#000000', nombre: 'X'         },
-        youtube:   { color: '#FF0000', nombre: 'YouTube'   }, // ← naranja: #FF7A00
+        youtube:   { color: '#FF0000', nombre: 'YouTube'   },
     };
     const REDES = Object.keys(CFG);
     const MESES = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
@@ -15,9 +15,7 @@
     //  UTILIDADES
     // ============================
     function sinDatos(canvas, msg) {
-        canvas.parentElement
-            .querySelectorAll('.chart-empty')
-            .forEach(el => el.remove());
+        canvas.parentElement.querySelectorAll('.chart-empty').forEach(el => el.remove());
         canvas.parentElement.insertAdjacentHTML(
             'beforeend',
             `<p class="chart-empty text-muted" style="text-align:center;padding:1rem;">${msg}</p>`
@@ -36,9 +34,6 @@
         return c;
     }
 
-    // ============================
-    //  CARGA AJAX
-    // ============================
     async function cargar(filtros) {
         const params = new URLSearchParams(filtros);
         const r = await fetch('/api/graficas?' + params.toString(), {
@@ -49,7 +44,7 @@
     }
 
     // ============================
-    //  1. PASTEL — distribución interacción
+    //  1. PASTEL
     // ============================
     function pintarPastel(resumen) {
         const ctx = destruir('grafPastel');
@@ -91,7 +86,7 @@
     }
 
     // ============================
-    //  2. EDIFICIO — apilada por red
+    //  2. EDIFICIO (apilada por red)
     // ============================
     function pintarEdificio(mensual, diaria, filtros) {
         const ctx = destruir('grafEdificio');
@@ -110,7 +105,7 @@
             });
         } else {
             const dias = Array.from(new Set(diaria.map(d => d.dia))).sort();
-            labels = dias.map(d => d.slice(5)); // MM-DD
+            labels = dias.map(d => d.slice(5));
             REDES.forEach(r => series[r] = dias.map(() => 0));
             diaria.forEach(d => {
                 const i = dias.indexOf(d.dia);
@@ -150,51 +145,58 @@
     }
 
     // ============================
-    //  3. TOTALES POR RED (agrupadas)
+    //  3. TOTALES POR RED
+    //  → series = redes (color por red)
+    //  → X = métricas
     // ============================
     function pintarTotales(resumen) {
         const ctx = destruir('grafTotales');
         if (!ctx) return;
 
         const metricas = [
-            ['Interacción', 'interaccion', '#a51d4b'],
-            ['Reacciones',  'reacciones',  '#266CB4'],
-            ['Me gusta',    'me_gusta',    '#D72F89'],
-            ['Comentarios', 'comentarios', '#027A35'],
-            ['Compartidos', 'compartidos', '#e2a521'],
-            ['Vistas',      'vistas',      '#FF0000'],
+            ['Interacción', 'interaccion'],
+            ['Reacciones',  'reacciones'],
+            ['Me gusta',    'me_gusta'],
+            ['Comentarios', 'comentarios'],
+            ['Compartidos', 'compartidos'],
+            ['Vistas',      'vistas'],
         ];
 
         const presentes = metricas.filter(([, k]) =>
             resumen.some(f => Number(f[k] || 0) > 0)
         );
+        if (!presentes.length) return sinDatos(ctx, 'Sin datos en el periodo seleccionado.');
 
-        const datasets = presentes.map(([lbl, key, color]) => ({
-            label: lbl,
-            data: REDES.map(r => {
-                const f = resumen.find(x => x.red === r);
-                return f ? Number(f[key] || 0) : 0;
-            }),
-            backgroundColor: color,
-        }));
-
-        if (!datasets.length || datasets.every(d => d.data.every(v => v === 0))) {
-            return sinDatos(ctx, 'Sin datos en el periodo seleccionado.');
-        }
+        const datasets = REDES.map(red => {
+            const fila = resumen.find(x => x.red === red) || {};
+            return {
+                label: CFG[red].nombre,
+                data: presentes.map(([, k]) => Number(fila[k] || 0)),
+                backgroundColor: CFG[red].color,
+                borderColor: '#fff',
+                borderWidth: 1,
+            };
+        });
 
         new Chart(ctx, {
             type: 'bar',
-            data: { labels: REDES.map(r => CFG[r].nombre), datasets },
+            data: {
+                labels: presentes.map(([lbl]) => lbl),
+                datasets,
+            },
             options: {
                 responsive: true,
-                plugins: { legend: { position: 'bottom' } },
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: { mode: 'index', intersect: false },
+                },
                 scales: { y: { beginAtZero: true } },
             },
         });
     }
 
     // ============================
-    //  4. TOP 10 PUBLICACIONES
+    //  4. TOP 10
     // ============================
     function pintarTop(top) {
         const ctx = destruir('grafTop');
@@ -265,22 +267,161 @@
     }
 
     // ============================
+    //  6. ALCANCE MENSUAL (línea)
+    // ============================
+    function pintarAlcanceMes(data) {
+        const ctx = destruir('grafAlcanceMes');
+        if (!ctx) return;
+
+        const series = {};
+        REDES.forEach(r => series[r] = Array(12).fill(0));
+        data.forEach(f => {
+            const i = (Number(f.mes) || 0) - 1;
+            if (series[f.red] && i >= 0 && i < 12) {
+                series[f.red][i] = Number(f.alcance || 0);
+            }
+        });
+
+        const hay = REDES.some(r => series[r].some(v => v > 0));
+        if (!hay) return sinDatos(ctx, 'Sin datos en el periodo seleccionado.');
+
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: MESES,
+                datasets: REDES.map(r => ({
+                    label: CFG[r].nombre,
+                    data: series[r],
+                    borderColor: CFG[r].color,
+                    backgroundColor: CFG[r].color + '22',
+                    borderWidth: 2,
+                    tension: 0.3,
+                    pointRadius: 4,
+                    pointBackgroundColor: CFG[r].color,
+                    fill: false,
+                })),
+            },
+            options: {
+                responsive: true,
+                interaction: { mode: 'index', intersect: false },
+                plugins: { legend: { position: 'bottom' } },
+                scales: { y: { beginAtZero: true } },
+            },
+        });
+    }
+
+    // ============================
+    //  7. RENDIMIENTO POR FORMATO
+    // ============================
+    function pintarFormato(data) {
+        const ctx = destruir('grafFormato');
+        if (!ctx) return;
+
+        const formatos = Array.from(new Set(data.map(d => d.formato)));
+        if (!formatos.length) return sinDatos(ctx, 'Sin datos de formato.');
+
+        const datasets = REDES.map(red => ({
+            label: CFG[red].nombre,
+            data: formatos.map(fo => {
+                const row = data.find(d => d.formato === fo && d.red === red);
+                return row ? Number(row.total || 0) : 0;
+            }),
+            backgroundColor: CFG[red].color,
+            borderColor: '#fff',
+            borderWidth: 1,
+        }));
+
+        const hay = datasets.some(ds => ds.data.some(v => v > 0));
+        if (!hay) return sinDatos(ctx, 'Sin datos de formato en el periodo.');
+
+        new Chart(ctx, {
+            type: 'bar',
+            data: { labels: formatos, datasets },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'bottom' },
+                    tooltip: { mode: 'index', intersect: false },
+                },
+                scales: { y: { beginAtZero: true } },
+            },
+        });
+    }
+
+    // ============================
+    //  8. HEATMAP (tabla HTML)
+    // ============================
+    function pintarHeatmap(data) {
+        const cont = document.getElementById('heatmapContainer');
+        if (!cont) return;
+        cont.innerHTML = '';
+
+        if (!data.length) {
+            cont.innerHTML = '<p class="chart-empty text-muted" style="text-align:center;padding:1rem;">Sin datos en el periodo seleccionado.</p>';
+            return;
+        }
+
+        const campanas = Array.from(new Set(data.map(d => d.campana)));
+        const maxVal   = Math.max(...data.map(d => Number(d.total)));
+
+        const escala = v => {
+            if (maxVal === 0) return '#f8f8f8';
+            const t = Math.min(1, v / maxVal);
+            const r = Math.round(255 - t * (255 - 165));
+            const g = Math.round(255 - t * (255 -  29));
+            const b = Math.round(255 - t * (255 -  75));
+            return `rgb(${r},${g},${b})`;
+        };
+
+        let html = '<table style="width:100%; border-collapse:collapse; font-size:.8rem;">';
+        html += '<thead><tr><th style="padding:.3rem; text-align:left;">Campaña</th>';
+        MESES.forEach(m => html += `<th style="padding:.3rem; text-align:center;">${m}</th>`);
+        html += '</tr></thead><tbody>';
+
+        campanas.forEach(camp => {
+            html += `<tr><td style="padding:.35rem; font-weight:600; white-space:nowrap;">${camp}</td>`;
+            MESES.forEach((_, i) => {
+                const mesNum = i + 1;
+                const row = data.find(d => d.campana === camp && Number(d.mes) === mesNum);
+                const val = row ? Number(row.total) : 0;
+                const bg  = val ? escala(val) : '#f8f8f8';
+                const color = val > (maxVal * 0.6) ? '#fff' : '#333';
+                html += `<td title="${camp} · ${MESES[i]}: ${val}"
+                             style="padding:.5rem; text-align:center; background:${bg}; color:${color}; border:1px solid #eee; font-weight:600;">
+                             ${val || ''}
+                         </td>`;
+            });
+            html += '</tr>';
+        });
+
+        html += '</tbody></table>';
+        cont.innerHTML = html;
+    }
+
+    // ============================
     //  ACTUALIZAR TODO
     // ============================
     async function actualizar() {
         limpiarMensajes();
 
         const form = document.getElementById('filtrosGraficas');
+        if (!form) return;
+
         const data = Object.fromEntries(new FormData(form).entries());
         data.anio = window.GRAFICAS_ANIO || new Date().getFullYear();
 
         try {
             const r = await cargar(data);
+
             pintarPastel(r.resumen || []);
             pintarEdificio(r.mensual || [], r.diaria || [], r.filtros || {});
             pintarTotales(r.resumen || []);
             pintarTop(r.top || []);
             pintarCampanas(r.campanas || []);
+            pintarAlcanceMes(r.alcanceMes || []);
+            pintarFormato(r.porFormato || []);
+            pintarHeatmap(r.heatmap || []);
+
         } catch (e) {
             console.error('Error al cargar gráficas:', e);
         }
@@ -293,7 +434,6 @@
         const form = document.getElementById('filtrosGraficas');
         if (!form) return;
 
-        // Sincronizar inputs de fecha cuando se cambia el periodo
         const selPeriodo = form.querySelector('[name="periodo"]');
         const inDesde    = form.querySelector('[name="desde"]');
         const inHasta    = form.querySelector('[name="hasta"]');
@@ -302,9 +442,9 @@
             const p = selPeriodo.value;
             const hoy = new Date().toISOString().slice(0, 10);
             const bloquear = (p === 'mes' || p === '15d' || p === 'anio');
-            inDesde.disabled = bloquear;
-            inHasta.disabled = bloquear;
-            if (p === 'dia') inDesde.value = hoy;
+            if (inDesde) inDesde.disabled = bloquear;
+            if (inHasta) inHasta.disabled = bloquear;
+            if (p === 'dia' && inDesde) inDesde.value = hoy;
         });
         selPeriodo?.dispatchEvent(new Event('change'));
 

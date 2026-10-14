@@ -195,4 +195,42 @@ class Publicacion {
         ");
         return $st->fetchAll();
     }
+
+        /** Devuelve las redes donde se marcó publicar esta publicación. */
+    public static function redesDe(int $idPub): array {
+        $st = db()->prepare("
+            SELECT red FROM gestion_publicacion_redes
+            WHERE id_publicacion = ?
+            ORDER BY red
+        ");
+        $st->execute([$idPub]);
+        return $st->fetchAll(PDO::FETCH_COLUMN) ?: [];
+    }
+
+    /** Reemplaza las redes asociadas a una publicación. */
+    public static function guardarRedes(int $idPub, array $redes): void {
+        $validas = ['facebook','instagram','x','youtube'];
+        $redes   = array_values(array_intersect(array_unique($redes), $validas));
+
+        $db = db();
+        $db->beginTransaction();
+        try {
+            $db->prepare("DELETE FROM gestion_publicacion_redes WHERE id_publicacion = ?")
+               ->execute([$idPub]);
+
+            if ($redes) {
+                $st = $db->prepare("
+                    INSERT INTO gestion_publicacion_redes (id_publicacion, red)
+                    VALUES (?, ?)
+                ");
+                foreach ($redes as $r) {
+                    $st->execute([$idPub, $r]);
+                }
+            }
+            $db->commit();
+        } catch (Throwable $e) {
+            $db->rollBack();
+            throw $e;
+        }
+    }
 }

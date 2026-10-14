@@ -33,6 +33,9 @@ class GraficaController {
             'diaria'   => Metrica::serieDiariaFiltrada($f),
             'top'      => Metrica::topPublicaciones($f, 10),
             'campanas' => Metrica::porCampana($f),
+            'alcanceMes' => Metrica::alcanceMensualPorRed($f),
+            'porFormato' => Metrica::rendimientoPorFormato($f),
+            'heatmap'    => Metrica::heatmapMesCampana($f),
             'colores'  => Redes::PALETA,
             'nombres'  => Redes::NOMBRES,
         ]);

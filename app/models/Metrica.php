@@ -1,7 +1,7 @@
 <?php
 /**
  * Modelo de métricas por red social.
- * Campos relevantes: reacciones, me_gusta, comentarios, interaccion, compartidos, vistas.
+ * Campos: reacciones, me_gusta, comentarios, interaccion, compartidos, vistas.
  */
 class Metrica {
 
@@ -51,7 +51,7 @@ class Metrica {
         $red = strtolower($red);
         $c   = fn(string $k) => (int)($d[$k] ?? 0);
 
-        // En Facebook "reacciones" es el total; en otras redes usamos me_gusta.
+        // FB usa "reacciones" como total; el resto usa "me_gusta"
         $reacciones = $red === 'facebook' ? $c('reacciones') : $c('me_gusta');
 
         $st = db()->prepare("
@@ -84,13 +84,9 @@ class Metrica {
     }
 
     /* =========================================================
-     *  FILTROS DINÁMICOS (para gráficas)
+     *  FILTROS DINÁMICOS
      * ========================================================= */
 
-    /**
-     * Construye la cláusula WHERE según los filtros.
-     * $f puede traer: red, desde, hasta, tema_id.
-     */
     private static function buildWhere(array $f, array &$params): string {
         $w = [];
 
@@ -116,7 +112,7 @@ class Metrica {
         return $w ? ('WHERE ' . implode(' AND ', $w)) : '';
     }
 
-    /** Serie mensual (12 meses). Ideal cuando el periodo es "anio". */
+    /** Serie mensual: suma compuesta de todas las métricas. */
     public static function serieMensualFiltrada(array $f): array {
         $params = [];
         $where  = self::buildWhere($f, $params);
@@ -125,7 +121,8 @@ class Metrica {
             SELECT
                 EXTRACT(MONTH FROM p.fecha_publicacion)::int AS mes,
                 m.red,
-                SUM(m.interaccion)  AS interaccion,
+                SUM(m.reacciones + m.me_gusta + m.comentarios
+                    + m.compartidos + m.vistas)              AS interaccion,
                 SUM(m.reacciones)   AS reacciones,
                 SUM(m.me_gusta)     AS me_gusta,
                 SUM(m.comentarios)  AS comentarios,
@@ -142,7 +139,7 @@ class Metrica {
         return $st->fetchAll();
     }
 
-    /** Serie diaria. Ideal para 15 días, día o rango. */
+    /** Serie diaria. */
     public static function serieDiariaFiltrada(array $f): array {
         $params = [];
         $where  = self::buildWhere($f, $params);
@@ -151,7 +148,8 @@ class Metrica {
             SELECT
                 TO_CHAR(p.fecha_publicacion, 'YYYY-MM-DD') AS dia,
                 m.red,
-                SUM(m.interaccion)  AS interaccion,
+                SUM(m.reacciones + m.me_gusta + m.comentarios
+                    + m.compartidos + m.vistas)              AS interaccion,
                 SUM(m.reacciones)   AS reacciones,
                 SUM(m.me_gusta)     AS me_gusta,
                 SUM(m.comentarios)  AS comentarios,
@@ -168,7 +166,7 @@ class Metrica {
         return $st->fetchAll();
     }
 
-    /** Resumen total por red en el rango (para pastel y totales). */
+    /** Resumen total por red. */
     public static function resumenPorRedFiltrado(array $f): array {
         $params = [];
         $where  = self::buildWhere($f, $params);
@@ -176,12 +174,13 @@ class Metrica {
         $sql = "
             SELECT
                 m.red,
-                SUM(m.reacciones)  AS reacciones,
-                SUM(m.me_gusta)    AS me_gusta,
-                SUM(m.comentarios) AS comentarios,
-                SUM(m.interaccion) AS interaccion,
-                SUM(m.compartidos) AS compartidos,
-                SUM(m.vistas)      AS vistas
+                SUM(m.reacciones)   AS reacciones,
+                SUM(m.me_gusta)     AS me_gusta,
+                SUM(m.comentarios)  AS comentarios,
+                SUM(m.compartidos)  AS compartidos,
+                SUM(m.vistas)       AS vistas,
+                SUM(m.reacciones + m.me_gusta + m.comentarios
+                    + m.compartidos + m.vistas) AS interaccion
             FROM gestion_metricas m
             JOIN gestion_publicaciones p ON p.id_publicacion = m.id_publicacion
             $where
@@ -193,7 +192,7 @@ class Metrica {
         return $st->fetchAll();
     }
 
-    /** Top N publicaciones por interacción total. */
+    /** Top 10 publicaciones por interacción compuesta. */
     public static function topPublicaciones(array $f, int $limite = 10): array {
         $params = [];
         $where  = self::buildWhere($f, $params);
@@ -204,7 +203,8 @@ class Metrica {
                 p.id_publicacion,
                 p.titulo,
                 p.fecha_publicacion,
-                SUM(m.interaccion) AS total
+                SUM(m.reacciones + m.me_gusta + m.comentarios
+                    + m.compartidos + m.vistas) AS total
             FROM gestion_metricas m
             JOIN gestion_publicaciones p ON p.id_publicacion = m.id_publicacion
             $where
@@ -222,7 +222,6 @@ class Metrica {
         $params = [];
         $where  = self::buildWhere($f, $params);
 
-        // ⚠️ Ajusta nombre de tabla/columna si tu esquema difiere
         $sql = "
             SELECT
                 COALESCE(c.nombre_campana, 'Sin campaña') AS campana,
@@ -232,6 +231,73 @@ class Metrica {
             $where
             GROUP BY campana
             ORDER BY publicaciones DESC
+        ";
+        $st = db()->prepare($sql);
+        $st->execute($params);
+        return $st->fetchAll();
+    }
+
+    /** Alcance mensual por red (suma compuesta). */
+    public static function alcanceMensualPorRed(array $f): array {
+        $params = [];
+        $where  = self::buildWhere($f, $params);
+
+        $sql = "
+            SELECT
+                EXTRACT(MONTH FROM p.fecha_publicacion)::int AS mes,
+                m.red,
+                SUM(m.reacciones + m.me_gusta + m.comentarios
+                    + m.compartidos + m.vistas) AS alcance
+            FROM gestion_metricas m
+            JOIN gestion_publicaciones p ON p.id_publicacion = m.id_publicacion
+            $where
+            GROUP BY mes, m.red
+            ORDER BY mes, m.red
+        ";
+        $st = db()->prepare($sql);
+        $st->execute($params);
+        return $st->fetchAll();
+    }
+
+    /** Rendimiento por formato multimedia. */
+        /** Rendimiento por formato multimedia. */
+    public static function rendimientoPorFormato(array $f): array {
+        $params = [];
+        $where  = self::buildWhere($f, $params);
+
+        $sql = "
+            SELECT
+                COALESCE(fo.nombre_formato, 'Sin formato') AS formato,
+                m.red,
+                SUM(m.reacciones + m.me_gusta + m.comentarios
+                    + m.compartidos + m.vistas) AS total
+            FROM gestion_metricas m
+            JOIN gestion_publicaciones p ON p.id_publicacion = m.id_publicacion
+            LEFT JOIN gestion_formatos fo ON fo.id = p.id_formato_contenido
+            $where
+            GROUP BY formato, m.red
+            ORDER BY formato, m.red
+        ";
+        $st = db()->prepare($sql);
+        $st->execute($params);
+        return $st->fetchAll();
+    }
+
+    /** Heatmap: publicaciones por mes × campaña. */
+    public static function heatmapMesCampana(array $f): array {
+        $params = [];
+        $where  = self::buildWhere($f, $params);
+
+        $sql = "
+            SELECT
+                EXTRACT(MONTH FROM p.fecha_publicacion)::int AS mes,
+                COALESCE(c.nombre_campana, 'Sin campaña') AS campana,
+                COUNT(DISTINCT p.id_publicacion)          AS total
+            FROM gestion_publicaciones p
+            LEFT JOIN gestion_campanas c ON c.id_campana = p.id_campana
+            $where
+            GROUP BY mes, campana
+            ORDER BY campana, mes
         ";
         $st = db()->prepare($sql);
         $st->execute($params);
