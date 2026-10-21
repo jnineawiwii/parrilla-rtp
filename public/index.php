@@ -59,8 +59,13 @@ $rutas = [
     ['POST', '#^/notificaciones/marcar-todas$#', ['NotificacionController','marcarTodas']],
     ['GET',  '#^/api/notificaciones$#',         ['NotificacionController','api']],
 
-    ['GET',  '#^/graficas$#',           ['GraficaController','index']],
-    ['GET',  '#^/api/graficas$#',       ['GraficaController','datos']],
+    // --- RUTAS DE GRÁFICAS SEPARADAS ---
+    ['GET',  '#^/graficas$#',                   ['GraficaController','index']],
+    ['GET',  '#^/graficas/externas$#',          ['GraficaController','externas']],
+    ['GET',  '#^/graficas/internas$#',          ['GraficaController','internas']],
+    
+    ['GET',  '#^/api/graficas/externas$#',      ['GraficaController','apiExternas']],
+    ['GET',  '#^/api/graficas/internas$#',      ['GraficaController','apiInternas']],
 
     ['POST', '#^/api/ia/copy$#',        ['ApiController','generarCopy']],
 ];
